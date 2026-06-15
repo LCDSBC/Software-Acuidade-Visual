@@ -70,11 +70,13 @@ def config_path(name: str, root: Path | None = None) -> Path:
 
 
 def profile_path(name: str, root: Path | None = None) -> Path:
-    safe = "".join(ch for ch in name.strip() if ch.isalnum() or ch in ("-", "_", " ")).strip()
+    requested = Path(name.strip()).name
+    if requested.lower().endswith(".ini"):
+        requested = requested[:-4]
+    safe = "".join(ch for ch in requested if ch.isalnum() or ch in ("-", "_", " ")).strip()
     if not safe:
         safe = "Perfil"
-    if not safe.lower().endswith(".ini"):
-        safe = f"{safe}.ini"
+    safe = f"{safe}.ini"
     return ensure_portable_tree(root) / "Perfis" / safe
 
 
