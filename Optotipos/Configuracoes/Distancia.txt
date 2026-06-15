@@ -1,0 +1,2 @@
+Distancia=4000
+Unidade=mm

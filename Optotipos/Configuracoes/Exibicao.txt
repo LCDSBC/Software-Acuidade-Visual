@@ -1,0 +1,9 @@
+Modo=TelaUnica
+Fundo=Preto
+BarraFerramentas=ON
+Brilho=100
+Luminancia=100
+InversaoContraste=OFF
+OcultacaoLinhas=OFF
+OptotiposAleatorios=ON
+PerfilAtivo=Consultorio_4m.ini

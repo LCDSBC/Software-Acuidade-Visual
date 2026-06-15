@@ -1,0 +1,26 @@
+{
+  "descricao": "Catalogo de testes visuais renderizados pelo software Optotipos Profissional.",
+  "familias": [
+    "Snellen Letras",
+    "Snellen Numeros",
+    "Tumbling E",
+    "E Direcional",
+    "Landolt C",
+    "HOTV",
+    "LEA Symbols",
+    "Allen Figures",
+    "Sheridan Gardiner",
+    "Bailey-Lovie",
+    "LogMAR ETDRS",
+    "Duocromatico",
+    "Relogio Astigmatico",
+    "Ventilador Astigmatico",
+    "Cilindro Cruzado",
+    "Worth 4 Pontos",
+    "Estereopsia",
+    "Motilidade Ocular",
+    "Contraste",
+    "Cores",
+    "Filtros"
+  ]
+}

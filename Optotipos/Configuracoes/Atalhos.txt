@@ -1,0 +1,4 @@
+ConfiguracoesAvancadas=CTRL+ALT+C
+TelaCheia=F11
+ProximoTeste=ArrowRight
+TesteAnterior=ArrowLeft

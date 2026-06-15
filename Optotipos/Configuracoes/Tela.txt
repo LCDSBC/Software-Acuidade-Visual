@@ -1,0 +1,6 @@
+Polegadas=27
+LarguraTelaMM=597
+AlturaTelaMM=336
+ResolucaoHorizontal=1920
+ResolucaoVertical=1080
+AtualizadoEm=2026-06-15T00:00:00.000Z

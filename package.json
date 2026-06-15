@@ -1,0 +1,84 @@
+{
+  "name": "optotipos-profissional",
+  "version": "1.0.0",
+  "description": "Software profissional portátil de optótipos para optometria e oftalmologia.",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "preview": "vite preview --host 0.0.0.0",
+    "electron": "electron .",
+    "package:win": "npm run build && electron-builder --win portable --x64"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LCDSBC/Software-Acuidade-Visual.git"
+  },
+  "keywords": [
+    "optotipos",
+    "optometria",
+    "oftalmologia",
+    "acuidade-visual"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "build": {
+    "appId": "br.com.optotipos.profissional",
+    "productName": "Optótipos Profissional",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "Optotipos/**/*",
+      "Configurador/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "Optotipos",
+        "to": "Optotipos"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Optotipos-Profissional-${version}-portatil.${ext}"
+    }
+  },
+  "bugs": {
+    "url": "https://github.com/LCDSBC/Software-Acuidade-Visual/issues"
+  },
+  "homepage": "https://github.com/LCDSBC/Software-Acuidade-Visual#readme",
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
+    "eslint": "^10.5.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
+  }
+}

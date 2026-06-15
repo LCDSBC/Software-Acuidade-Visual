@@ -1,0 +1,8 @@
+node_modules/
+dist/
+release/
+.vite/
+*.log
+Optotipos/Logs/*.log
+Optotipos/Backup/*.opt
+!.gitkeep
