@@ -1,0 +1,3 @@
+Horizontal=OFF
+Vertical=OFF
+Rotacao=0

@@ -1,0 +1,3 @@
+Modo=TelaUnica
+MonitorExaminador=0
+MonitorTeste=0

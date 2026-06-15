@@ -1,0 +1,7 @@
+TelaCheia=ON
+BarraFerramentas=ON
+Fundo=branco
+Brilho=100
+Luminancia=100
+UltimoPerfil=Consultorio_4m.ini
+Filtro=Nenhum

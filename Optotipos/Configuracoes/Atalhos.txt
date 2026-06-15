@@ -1,0 +1,6 @@
+ConfiguracoesAvancadas=CTRL+ALT+C
+ProximoTeste=Right
+TesteAnterior=Left
+Aumentar=plus
+Diminuir=minus
+Aleatorio=R

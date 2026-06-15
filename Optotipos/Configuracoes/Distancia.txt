@@ -1,0 +1,2 @@
+Distancia=4
+Unidade=m
