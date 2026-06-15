@@ -52,7 +52,34 @@ cd Optotipos
 build_windows.bat
 ```
 
-Depois, copie a pasta `Optotipos/` inteira para pendrive, notebook, desktop ou mini PC.
+O build tambem cria um pacote de teste em:
+
+```text
+Optotipos/dist/Optotipos_Portatil/
+```
+
+Depois, copie essa pasta para pendrive, notebook, desktop ou mini PC.
+
+## Validacao clinica - Fase 4
+
+Antes de usar em consultorio, siga:
+
+```text
+Optotipos/Testes/FASE_4_VALIDACAO_E_POLIMENTO.md
+```
+
+Para gerar/atualizar o relatorio tecnico de validacao:
+
+```bat
+cd Optotipos
+validar_fase4_windows.bat
+```
+
+Relatorio gerado:
+
+```text
+Optotipos/Logs/ValidacaoClinica_Fase4.md
+```
 
 ## Controles principais
 
