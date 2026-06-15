@@ -3,11 +3,18 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from tkinter import Canvas
+from typing import Any
+
+try:
+    from tkinter import Canvas
+except ModuleNotFoundError:  # pragma: no cover - used only in headless test environments.
+    Canvas = Any
 
 from .calibration import (
     DisplayCalibration,
+    SNELLEN_CLINICAL_DENOMINATORS,
     etdrs_line_denominators,
+    etdrs_line_logmars,
     format_logmar,
     format_snellen,
     snellen_letter_height_px,
@@ -15,8 +22,10 @@ from .calibration import (
 from .catalog import VisualTest
 
 
-SNELLEN_DENOMINATORS = (200, 100, 70, 50, 40, 30, 25, 20, 15, 10)
+SNELLEN_DENOMINATORS = SNELLEN_CLINICAL_DENOMINATORS
 ROTATIONS = (0, 90, 180, 270)
+ETDRS_OPTOTYPES_PER_LINE = 5
+OPTOTYPE_GRID = 5
 
 
 @dataclass
@@ -39,6 +48,21 @@ class RenderOptions:
     filter_name: str = "Nenhum"
 
 
+@dataclass(frozen=True)
+class ClinicalLine:
+    denominator: float
+    logmar: float
+    optotype_size_px: int
+    stroke_width_px: int
+    optotype_count: int
+    letter_spacing_px: int
+    row_spacing_px: int
+
+    @property
+    def total_width_px(self) -> int:
+        return self.optotype_count * self.optotype_size_px + (self.optotype_count - 1) * self.letter_spacing_px
+
+
 def clear(canvas: Canvas, background: str) -> None:
     canvas.delete("all")
     canvas.configure(background=background)
@@ -59,9 +83,9 @@ def render_test(
     if renderer in {"chart", "directional", "landolt", "shapes", "etdrs"}:
         draw_acuity_chart(canvas, width, height, test, calibration, state, options)
     elif renderer == "duochrome":
-        draw_duochrome(canvas, width, height, options)
+        draw_duochrome(canvas, width, height, calibration, state, options)
     elif renderer == "clock":
-        draw_astigmatic_clock(canvas, width, height, options)
+        draw_astigmatic_clock(canvas, width, height, state, options)
     elif renderer == "fan":
         draw_astigmatic_fan(canvas, width, height, options)
     elif renderer == "cross_cylinder":
@@ -106,21 +130,54 @@ def draw_acuity_chart(
     options: RenderOptions,
 ) -> None:
     denominators = [state.denominator] if state.single_line else list(etdrs_line_denominators() if test.renderer == "etdrs" else SNELLEN_DENOMINATORS)
-    usable_top = 70
-    usable_height = height - 160
-    line_gap = max(34, usable_height // max(len(denominators), 1))
+    logmars = [0.0] if state.single_line else list(etdrs_line_logmars() if test.renderer == "etdrs" else [0.0] * len(denominators))
+    usable_top = 76
+    usable_height = height - 170
     rng = random.Random(state.seed)
 
-    for index, denominator in enumerate(denominators):
-        size = snellen_letter_height_px(calibration, denominator)
-        y = usable_top + index * line_gap + line_gap / 2
-        symbol_count = 5 if test.renderer == "etdrs" else min(8, index + 1)
+    lines = [clinical_line(calibration, denominator, ETDRS_OPTOTYPES_PER_LINE if test.renderer == "etdrs" else min(8, index + 1)) for index, denominator in enumerate(denominators)]
+    total_height = sum(line.optotype_size_px for line in lines) + sum(line.row_spacing_px for line in lines[:-1])
+    scale = min(1.0, usable_height / max(total_height, 1))
+    y = usable_top + max(0, usable_height - total_height * scale) / 2
+
+    for index, (denominator, line) in enumerate(zip(denominators, lines)):
+        size = max(8, round(line.optotype_size_px * scale))
+        stroke = max(1, round(line.stroke_width_px * scale))
+        row_spacing = max(10, round(line.row_spacing_px * scale))
+        center_y = y + size / 2
+        symbol_count = line.optotype_count
         symbols = choose_symbols(test.symbols, symbol_count, rng if state.randomize else None)
-        x_positions = centered_positions(width, symbol_count, max(size * 0.95, 40))
+        spacing = etdrs_spacing_px(size) if test.renderer == "etdrs" else max(round(size * 0.6), stroke * 2)
+        x_positions = centered_positions(width, symbol_count, size + spacing)
         for x, symbol in zip(x_positions, symbols):
-            draw_symbol(canvas, x, y, size, symbol, test.renderer, options, rng)
-        label = f"{format_snellen(float(denominator))}  {format_logmar(float(denominator))}"
-        canvas.create_text(26, y, text=label, fill=options.foreground, anchor="w", font=("Arial", 14))
+            draw_symbol(canvas, x, center_y, size, stroke, symbol, test.renderer, options, rng)
+        label = line_label(float(denominator), logmars[index] if index < len(logmars) else None, test.renderer)
+        canvas.create_text(26, center_y, text=label, fill=options.foreground, anchor="w", font=("Arial", 14))
+        y += size + row_spacing
+
+
+def clinical_line(calibration: DisplayCalibration, denominator: float, optotype_count: int) -> ClinicalLine:
+    size = snellen_letter_height_px(calibration, denominator)
+    stroke = max(1, round(size / OPTOTYPE_GRID))
+    return ClinicalLine(
+        denominator=denominator,
+        logmar=0.0 if denominator <= 0 else math.log10(denominator / 20),
+        optotype_size_px=size,
+        stroke_width_px=stroke,
+        optotype_count=optotype_count,
+        letter_spacing_px=size,
+        row_spacing_px=size,
+    )
+
+
+def etdrs_spacing_px(size: int) -> int:
+    return size
+
+
+def line_label(denominator: float, logmar: float | None, renderer: str) -> str:
+    if renderer == "etdrs" and logmar is not None:
+        return f"{format_snellen(float(denominator))}  {logmar:.1f} LogMAR"
+    return f"{format_snellen(float(denominator))}  {format_logmar(float(denominator))}"
 
 
 def choose_symbols(symbols: tuple[str, ...], count: int, rng: random.Random | None) -> list[str]:
@@ -153,6 +210,7 @@ def draw_symbol(
     x: float,
     y: float,
     size: int,
+    stroke: int,
     symbol: str,
     renderer: str,
     options: RenderOptions,
@@ -160,28 +218,102 @@ def draw_symbol(
 ) -> None:
     if renderer == "directional":
         angle = transform_angle(options, rng.choice(ROTATIONS))
-        canvas.create_text(x, y, text="E", fill=options.foreground, angle=angle, font=("Arial", size, "bold"))
+        draw_grid_optotype(canvas, x, y, size, stroke, "E", options.foreground, angle)
     elif renderer == "landolt":
-        draw_landolt_c(canvas, x, y, size, transform_angle(options, rng.choice(ROTATIONS)), options.foreground)
+        draw_landolt_c(canvas, x, y, size, stroke, transform_angle(options, rng.choice(ROTATIONS)), options.foreground)
     elif renderer == "shapes":
         draw_shape(canvas, x, y, size, symbol, options.foreground)
     else:
-        canvas.create_text(x, y, text=symbol, fill=options.foreground, angle=options.rotation, font=("Arial", size, "bold"))
+        draw_grid_optotype(canvas, x, y, size, stroke, symbol, options.foreground, options.rotation)
 
 
-def draw_landolt_c(canvas: Canvas, x: float, y: float, size: int, angle: int, color: str) -> None:
-    radius = size * 0.42
-    thickness = max(5, size * 0.16)
-    canvas.create_oval(x - radius, y - radius, x + radius, y + radius, outline=color, width=thickness)
-    gap = radius * 0.85
-    if angle == 0:
-        coords = (x + radius - thickness, y - gap, x + radius + thickness * 2, y + gap)
-    elif angle == 90:
-        coords = (x - gap, y - radius - thickness * 2, x + gap, y - radius + thickness)
-    elif angle == 180:
-        coords = (x - radius - thickness * 2, y - gap, x - radius + thickness, y + gap)
+def draw_grid_optotype(canvas: Canvas, x: float, y: float, size: int, stroke: int, symbol: str, color: str, angle: int = 0) -> None:
+    symbol = symbol.upper()
+    if symbol == "E":
+        draw_cell_pattern(canvas, x, y, size, e_pattern_cells(), color, angle)
+    elif symbol in {"C", "D", "H", "O", "S"}:
+        draw_cell_pattern(canvas, x, y, size, block_letter_cells(symbol), color, angle)
+    elif symbol in {"K", "N", "R", "V", "Z"}:
+        draw_stroked_letter(canvas, x, y, size, stroke, symbol, color, angle)
     else:
-        coords = (x - gap, y + radius - thickness, x + gap, y + radius + thickness * 2)
+        draw_cell_pattern(canvas, x, y, size, block_letter_cells("O"), color, angle)
+
+
+def e_pattern_cells() -> set[tuple[int, int]]:
+    return {(0, row) for row in range(5)} | {(col, 0) for col in range(5)} | {(col, 2) for col in range(4)} | {(col, 4) for col in range(5)}
+
+
+def block_letter_cells(symbol: str) -> set[tuple[int, int]]:
+    if symbol == "C":
+        return {(col, 0) for col in range(1, 5)} | {(0, row) for row in range(5)} | {(col, 4) for col in range(1, 5)}
+    if symbol == "D":
+        return {(0, row) for row in range(5)} | {(col, 0) for col in range(4)} | {(col, 4) for col in range(4)} | {(4, row) for row in range(1, 4)}
+    if symbol == "H":
+        return {(0, row) for row in range(5)} | {(4, row) for row in range(5)} | {(col, 2) for col in range(5)}
+    if symbol == "S":
+        return {(col, 0) for col in range(5)} | {(0, 1), (0, 2)} | {(col, 2) for col in range(5)} | {(4, 2), (4, 3)} | {(col, 4) for col in range(5)}
+    return {(col, 0) for col in range(5)} | {(col, 4) for col in range(5)} | {(0, row) for row in range(5)} | {(4, row) for row in range(5)}
+
+
+def draw_cell_pattern(canvas: Canvas, x: float, y: float, size: int, cells: set[tuple[int, int]], color: str, angle: int = 0) -> None:
+    cell = size / OPTOTYPE_GRID
+    for col, row in cells:
+        points = rotated_cell_points(x, y, size, col, row, angle)
+        canvas.create_polygon(*points, fill=color, outline=color)
+
+
+def rotated_cell_points(x: float, y: float, size: int, col: int, row: int, angle: int) -> list[float]:
+    cell = size / OPTOTYPE_GRID
+    left = -size / 2 + col * cell
+    top = -size / 2 + row * cell
+    points = ((left, top), (left + cell, top), (left + cell, top + cell), (left, top + cell))
+    rotated: list[float] = []
+    radians = math.radians(angle % 360)
+    cos_a = math.cos(radians)
+    sin_a = math.sin(radians)
+    for px, py in points:
+        rotated.extend((x + px * cos_a - py * sin_a, y + px * sin_a + py * cos_a))
+    return rotated
+
+
+def draw_stroked_letter(canvas: Canvas, x: float, y: float, size: int, stroke: int, symbol: str, color: str, angle: int = 0) -> None:
+    half = size / 2
+    cell = size / OPTOTYPE_GRID
+    segments = {
+        "K": [(-half + cell / 2, -half, -half + cell / 2, half), (-half + cell, 0, half, -half), (-half + cell, 0, half, half)],
+        "N": [(-half + cell / 2, -half, -half + cell / 2, half), (half - cell / 2, -half, half - cell / 2, half), (-half + cell, -half, half - cell, half)],
+        "R": [(-half + cell / 2, -half, -half + cell / 2, half), (-half, -half + cell / 2, half - cell, -half + cell / 2), (half - cell / 2, -half + cell, half - cell / 2, 0), (-half, cell / 2, half - cell, cell / 2), (-half + cell, cell / 2, half, half)],
+        "V": [(-half + cell / 2, -half, 0, half), (half - cell / 2, -half, 0, half)],
+        "Z": [(-half, -half + cell / 2, half, -half + cell / 2), (half - cell / 2, -half + cell, -half + cell / 2, half - cell), (-half, half - cell / 2, half, half - cell / 2)],
+    }.get(symbol, [])
+    for x1, y1, x2, y2 in segments:
+        rx1, ry1 = rotate_point(x1, y1, angle)
+        rx2, ry2 = rotate_point(x2, y2, angle)
+        canvas.create_line(x + rx1, y + ry1, x + rx2, y + ry2, fill=color, width=stroke, capstyle="projecting", joinstyle="miter")
+
+
+def rotate_point(px: float, py: float, angle: int) -> tuple[float, float]:
+    radians = math.radians(angle % 360)
+    return (px * math.cos(radians) - py * math.sin(radians), px * math.sin(radians) + py * math.cos(radians))
+
+
+def landolt_gap_px(size: int) -> int:
+    return max(1, round(size / OPTOTYPE_GRID))
+
+
+def draw_landolt_c(canvas: Canvas, x: float, y: float, size: int, stroke: int, angle: int, color: str) -> None:
+    radius = size / 2 - stroke / 2
+    thickness = max(1, stroke)
+    canvas.create_oval(x - radius, y - radius, x + radius, y + radius, outline=color, width=thickness)
+    gap = landolt_gap_px(size)
+    if angle == 0:
+        coords = (x + radius - thickness, y - gap / 2, x + radius + thickness * 2, y + gap / 2)
+    elif angle == 90:
+        coords = (x - gap / 2, y - radius - thickness * 2, x + gap / 2, y - radius + thickness)
+    elif angle == 180:
+        coords = (x - radius - thickness * 2, y - gap / 2, x - radius + thickness, y + gap / 2)
+    else:
+        coords = (x - gap / 2, y + radius - thickness, x + gap / 2, y + radius + thickness * 2)
     canvas.create_rectangle(*coords, fill=canvas["background"], outline=canvas["background"])
 
 
@@ -209,26 +341,45 @@ def draw_shape(canvas: Canvas, x: float, y: float, size: int, symbol: str, color
         canvas.create_text(x, y, text="?", fill=color, font=("Arial", size, "bold"))
 
 
-def draw_duochrome(canvas: Canvas, width: int, height: int, options: RenderOptions) -> None:
-    canvas.create_rectangle(0, 0, width / 2, height, fill="#c00000", outline="")
-    canvas.create_rectangle(width / 2, 0, width, height, fill="#008000", outline="")
+def draw_duochrome(canvas: Canvas, width: int, height: int, calibration: DisplayCalibration, state: RenderState, options: RenderOptions) -> None:
+    canvas.create_rectangle(0, 0, width / 2, height, fill="#b90000", outline="")
+    canvas.create_rectangle(width / 2, 0, width, height, fill="#00843d", outline="")
+    canvas.create_line(width / 2, 0, width / 2, height, fill="black", width=2)
+    size = min(snellen_letter_height_px(calibration, state.denominator or 30), round(height * 0.28))
+    stroke = max(1, round(size / OPTOTYPE_GRID))
     for x, label in ((width * 0.25, "VERMELHO"), (width * 0.75, "VERDE")):
-        canvas.create_text(x, height * 0.18, text=label, fill="white", font=("Arial", 36, "bold"))
-    for x in (width * 0.25, width * 0.75):
-        canvas.create_text(x, height * 0.52, text="O C D K", fill="white", font=("Arial", 74, "bold"))
+        canvas.create_text(x, height * 0.18, text=label, fill="white", font=("Arial", 28, "bold"))
+    for x_offset in (0, width / 2):
+        positions = centered_positions(width / 2, 4, size * 1.45)
+        for x, symbol in zip([position + x_offset for position in positions], ("O", "C", "D", "K")):
+            draw_grid_optotype(canvas, x, height * 0.55, size, stroke, symbol, "white", 0)
 
 
-def draw_astigmatic_clock(canvas: Canvas, width: int, height: int, options: RenderOptions) -> None:
+def draw_astigmatic_clock(canvas: Canvas, width: int, height: int, state: RenderState, options: RenderOptions) -> None:
     cx, cy = width / 2, height / 2
     radius = min(width, height) * 0.34
-    for hour in range(12):
-        angle = math.radians(hour * 30 - 90)
+    line_color = contrast_color(options.foreground, state.contrast)
+    for degree in range(0, 180, 10):
+        angle = math.radians(degree)
         x1, y1 = cx + math.cos(angle) * radius * 0.18, cy + math.sin(angle) * radius * 0.18
         x2, y2 = cx + math.cos(angle) * radius, cy + math.sin(angle) * radius
-        canvas.create_line(x1, y1, x2, y2, fill=options.foreground, width=5)
-        tx, ty = cx + math.cos(angle) * radius * 1.15, cy + math.sin(angle) * radius * 1.15
-        canvas.create_text(tx, ty, text=str(hour if hour else 12), fill=options.foreground, font=("Arial", 22, "bold"))
+        x3, y3 = cx - math.cos(angle) * radius * 0.18, cy - math.sin(angle) * radius * 0.18
+        x4, y4 = cx - math.cos(angle) * radius, cy - math.sin(angle) * radius
+        canvas.create_line(x3, y3, x4, y4, fill=line_color, width=4)
+        canvas.create_line(x1, y1, x2, y2, fill=line_color, width=4)
+        if degree % 30 == 0:
+            tx, ty = cx + math.cos(angle) * radius * 1.15, cy + math.sin(angle) * radius * 1.15
+            canvas.create_text(tx, ty, text=str(degree), fill=options.foreground, font=("Arial", 18, "bold"))
     canvas.create_oval(cx - 8, cy - 8, cx + 8, cy + 8, fill=options.foreground, outline="")
+
+
+def contrast_color(base: str, contrast: float) -> str:
+    contrast = max(0.05, min(1.0, contrast))
+    if base == "white":
+        value = round(255 * contrast)
+    else:
+        value = round(255 * (1 - contrast))
+    return f"#{value:02x}{value:02x}{value:02x}"
 
 
 def draw_astigmatic_fan(canvas: Canvas, width: int, height: int, options: RenderOptions) -> None:

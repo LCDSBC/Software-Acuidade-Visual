@@ -5,7 +5,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from .calibration import calibration_from_config
+from .calibration import calibration_from_config, calibration_report
 from .config import (
     CONFIG_FILES,
     RuntimeConfig,
@@ -31,6 +31,7 @@ class ConfiguratorApp:
         self.vars: dict[tuple[str, str], tk.StringVar] = {}
         self.profile_name = tk.StringVar(value="Novo_Perfil")
         self.status = tk.StringVar(value=f"Pasta portatil: {self.home}")
+        self.report_text = tk.StringVar(value="")
         self.root.title("Configurador - Optotipos Profissional")
         self.root.geometry("980x680")
         self.build_ui()
@@ -98,6 +99,7 @@ class ConfiguratorApp:
         ttk.Button(buttons, text="-0.5%", command=lambda: self.adjust_scale(0.995)).pack(side="left", padx=3)
         ttk.Button(buttons, text="+0.5%", command=lambda: self.adjust_scale(1.005)).pack(side="left", padx=3)
         ttk.Button(buttons, text="Salvar escala", command=self.save_all).pack(side="left", padx=3)
+        ttk.Label(scale, textvariable=self.report_text, justify="left").grid(row=7, column=0, columnspan=3, sticky="w", padx=8, pady=8)
         self.ruler.bind("<Configure>", lambda _event: self.draw_ruler())
         self.draw_ruler()
 
@@ -191,6 +193,14 @@ class ConfiguratorApp:
         self.ruler.create_line(x1, y - 18, x1, y + 18, fill="black", width=3)
         self.ruler.create_line(x2, y - 18, x2, y + 18, fill="black", width=3)
         self.ruler.create_text((x1 + x2) / 2, y + 32, text="100 mm", fill="black", font=("Arial", 14, "bold"))
+        self.update_calibration_report()
+
+    def update_calibration_report(self) -> None:
+        try:
+            report = calibration_report(calibration_from_config(self.preview_config()))
+            self.report_text.set("\n".join(report.as_lines()))
+        except Exception:
+            self.report_text.set("Relatorio de calibracao indisponivel ate corrigir os valores.")
 
     def preview_config(self) -> RuntimeConfig:
         values = {file_name: dict(self.config.values[file_name]) for file_name in CONFIG_FILES}
@@ -207,6 +217,7 @@ class ConfiguratorApp:
                 save_config_file(file_name, values, self.home)
         self.config = load_config(self.home)
         self.status.set("Configuracoes salvas.")
+        self.update_calibration_report()
         self.logger.info("Configuracoes salvas")
 
     def reload(self) -> None:

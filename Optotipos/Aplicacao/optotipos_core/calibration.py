@@ -10,6 +10,8 @@ MIN_DISTANCE_M = 1.0
 MAX_DISTANCE_M = 20.0
 REFERENCE_SNELLEN_NUMERATOR_FT = 20.0
 STANDARD_LETTER_ARC_MINUTES = 5.0
+SNELLEN_CLINICAL_DENOMINATORS = (400, 300, 200, 100, 80, 60, 50, 40, 30, 25, 20, 15, 10)
+ETDRS_LOGMAR_LINES = tuple(round(value / 10, 1) for value in range(10, -4, -1))
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,53 @@ class DisplayCalibration:
     @property
     def pixels_per_mm(self) -> float:
         return (self.pixels_per_mm_x + self.pixels_per_mm_y) / 2
+
+    @property
+    def axis_difference_percent(self) -> float:
+        average = self.pixels_per_mm
+        if average == 0:
+            return 100.0
+        return abs(self.pixels_per_mm_x - self.pixels_per_mm_y) / average * 100
+
+    def mm_to_px(self, value_mm: float, axis: str = "average") -> float:
+        if axis == "x":
+            return value_mm * self.pixels_per_mm_x
+        if axis == "y":
+            return value_mm * self.pixels_per_mm_y
+        return value_mm * self.pixels_per_mm
+
+    def px_to_mm(self, value_px: float, axis: str = "average") -> float:
+        pixels_per_mm = self.pixels_per_mm
+        if axis == "x":
+            pixels_per_mm = self.pixels_per_mm_x
+        elif axis == "y":
+            pixels_per_mm = self.pixels_per_mm_y
+        if pixels_per_mm == 0:
+            return 0.0
+        return value_px / pixels_per_mm
+
+
+@dataclass(frozen=True)
+class CalibrationReport:
+    precision_percent: float
+    max_estimated_error_percent: float
+    max_estimated_error_mm_per_100mm: float
+    scale_factor: float
+    pixels_per_mm_x: float
+    pixels_per_mm_y: float
+    pixels_per_mm_average: float
+    distance_m: float
+
+    def as_lines(self) -> list[str]:
+        return [
+            f"Precisao estimada: {self.precision_percent:.2f}%",
+            f"Erro maximo estimado: {self.max_estimated_error_percent:.2f}%",
+            f"Erro em 100 mm: {self.max_estimated_error_mm_per_100mm:.2f} mm",
+            f"Escala aplicada: {self.scale_factor:.4f}",
+            f"Pixels/mm X: {self.pixels_per_mm_x:.4f}",
+            f"Pixels/mm Y: {self.pixels_per_mm_y:.4f}",
+            f"Distancia: {self.distance_m:g} m",
+        ]
 
 
 def clamp_distance(distance_m: float) -> float:
@@ -73,6 +122,14 @@ def snellen_letter_height_px(calibration: DisplayCalibration, denominator_ft: fl
     return max(8, round(height_mm * calibration.pixels_per_mm))
 
 
+def optotype_stroke_width_mm(distance_m: float, denominator_ft: float) -> float:
+    return snellen_letter_height_mm(distance_m, denominator_ft) / 5
+
+
+def optotype_stroke_width_px(calibration: DisplayCalibration, denominator_ft: float) -> int:
+    return max(1, round(snellen_letter_height_px(calibration, denominator_ft) / 5))
+
+
 def denominator_from_logmar(logmar: float) -> float:
     decimal_acuity = 10 ** (-logmar)
     if decimal_acuity <= 0:
@@ -86,7 +143,11 @@ def logmar_from_denominator(denominator_ft: float) -> float:
 
 
 def etdrs_line_denominators() -> list[float]:
-    return [200, 160, 125, 100, 80, 63, 50, 40, 32, 25, 20, 16, 12.5, 10]
+    return [denominator_from_logmar(logmar) for logmar in ETDRS_LOGMAR_LINES]
+
+
+def etdrs_line_logmars() -> list[float]:
+    return list(ETDRS_LOGMAR_LINES)
 
 
 def format_snellen(denominator_ft: float) -> str:
@@ -97,3 +158,20 @@ def format_snellen(denominator_ft: float) -> str:
 
 def format_logmar(denominator_ft: float) -> str:
     return f"{logmar_from_denominator(denominator_ft):.2f} LogMAR"
+
+
+def calibration_report(calibration: DisplayCalibration) -> CalibrationReport:
+    axis_error = calibration.axis_difference_percent / 2
+    quantization_error = 0.5 / max(calibration.mm_to_px(100), 1) * 100
+    max_error = axis_error + quantization_error
+    precision = max(0.0, min(100.0, 100.0 - max_error))
+    return CalibrationReport(
+        precision_percent=precision,
+        max_estimated_error_percent=max_error,
+        max_estimated_error_mm_per_100mm=max_error,
+        scale_factor=calibration.scale_factor,
+        pixels_per_mm_x=calibration.pixels_per_mm_x,
+        pixels_per_mm_y=calibration.pixels_per_mm_y,
+        pixels_per_mm_average=calibration.pixels_per_mm,
+        distance_m=calibration.distance_m,
+    )
