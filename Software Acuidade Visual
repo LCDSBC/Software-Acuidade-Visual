@@ -1,7 +1,0 @@
-echo "# Software-Acuidade-Visual" >> README.md 
-git init 
-git add README.md 
-git commit -m "primeiro commit" 
-git branch -M main 
-git remote add origin https://github.com/LCDSBC/Software-Acuidade-Visual.git
- git push -u origin main
