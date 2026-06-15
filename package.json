@@ -2,6 +2,7 @@
   "name": "optotipos-profissional",
   "version": "1.0.0",
   "description": "Software profissional portátil de optótipos para optometria e oftalmologia.",
+  "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --host 0.0.0.0",

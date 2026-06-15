@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { pixelsPerMM, type CalibrationSettings, type DisplayMode, type Rotation } from '../shared/settings'
 import { exportBackup, importBackup, listProfiles, loadProfile, loadSettings, saveProfile, saveSettings } from '../shared/storage'
-import { ACUITY_LEVELS, optotypeMetric } from '../core/acuity'
+import { optotypeMetric } from '../core/acuity'
 
 const STEPS = ['Tela', 'Distância', 'Régua virtual', 'Exibição', 'Perfis e backup']
 
@@ -33,15 +33,19 @@ export function ConfiguradorApp() {
   }
 
   async function persist() {
+    if (!settings) return
     await saveSettings(settings)
     setMessage('Configurações salvas em Optotipos/Configuracoes.')
   }
 
   async function persistProfile() {
-    const savedName = await saveProfile(profileName, settings)
+    if (!settings) return
+    const settingsWithProfile = { ...settings, activeProfile: profileName.endsWith('.ini') ? profileName : `${profileName}.ini` }
+    const savedName = await saveProfile(profileName, settingsWithProfile)
+    await saveSettings({ ...settingsWithProfile, activeProfile: savedName })
     const loadedProfiles = await listProfiles()
     setProfiles(loadedProfiles)
-    update({ activeProfile: savedName })
+    setSettings({ ...settingsWithProfile, activeProfile: savedName })
     setMessage(`Perfil ${savedName} salvo.`)
   }
 

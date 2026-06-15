@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   ACUITY_LEVELS,
   CLINICAL_TESTS,
@@ -67,7 +67,7 @@ export function OptotiposApp() {
       `rotate(${settings.inversion.rotation}deg)`,
     ].join(' '),
     filter: `brightness(${settings.display.brightness}%) ${settings.display.contrastInverted ? 'invert(1)' : ''}`,
-  } as React.CSSProperties
+  } as CSSProperties
 
   return (
     <main className="opto-shell">
