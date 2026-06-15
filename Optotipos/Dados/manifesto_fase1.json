@@ -1,0 +1,54 @@
+{
+  "produto": "Optotipos Profissional",
+  "fase": "Fase 1 - Base e arquitetura portatil",
+  "objetivo": "Aplicacao desktop offline para apresentacao de optotipos e testes visuais, sem prontuario, agenda, cadastro de pacientes ou financeiro.",
+  "plataforma_alvo": "Windows",
+  "modo_de_instalacao": "Portatil",
+  "modulos": [
+    {
+      "nome": "Configurador",
+      "entrada_fonte": "Configurador/Configurador.pyw",
+      "executavel_esperado": "Configurador.exe",
+      "responsabilidade": "Calibracao, distancia, tela, monitores, perfis e backup."
+    },
+    {
+      "nome": "Optotipos",
+      "entrada_fonte": "Optotipos/Optotipos.pyw",
+      "executavel_esperado": "Optotipos.exe",
+      "responsabilidade": "Exibicao dos testes visuais usando configuracoes salvas."
+    }
+  ],
+  "fora_do_escopo": [
+    "cadastro de pacientes",
+    "prontuario eletronico",
+    "agenda",
+    "financeiro",
+    "prescricao",
+    "armazenamento de dados clinicos pessoais"
+  ],
+  "pastas_portateis_obrigatorias": [
+    "Configuracoes",
+    "Perfis",
+    "Testes",
+    "Dados",
+    "Backup",
+    "Logs"
+  ],
+  "arquivos_configuracao_obrigatorios": [
+    "Tela.txt",
+    "Distancia.txt",
+    "Escala.txt",
+    "Inversao.txt",
+    "Monitores.txt",
+    "Exibicao.txt",
+    "Atalhos.txt"
+  ],
+  "criterios_aceite_fase1": [
+    "estrutura de pastas portatil existe",
+    "configuracoes usam caminhos relativos",
+    "distancia padrao usa unidade clinica valida",
+    "dois pontos de entrada independentes existem",
+    "build Windows esta documentado",
+    "escopo exclui cadastro, prontuario, agenda e financeiro"
+  ]
+}

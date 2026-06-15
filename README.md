@@ -34,6 +34,29 @@ Optotipos/
 
 Todas as configuracoes usam caminhos relativos e ficam em arquivos `.txt` dentro de `Optotipos/Configuracoes/`.
 
+## Fase 1 - Base e arquitetura
+
+A fundacao do projeto esta documentada em:
+
+```text
+Optotipos/Testes/FASE_1_BASE_E_ARQUITETURA.md
+```
+
+Manifesto estruturado:
+
+```text
+Optotipos/Dados/manifesto_fase1.json
+```
+
+Essa fase garante:
+
+- dois modulos independentes;
+- estrutura portatil;
+- configuracoes centralizadas;
+- distancia padrao clinicamente valida;
+- ausencia de cadastro, prontuario, agenda e financeiro;
+- criterios de aceite testaveis.
+
 ## Executar em modo fonte
 
 Requer Python 3.10+.
