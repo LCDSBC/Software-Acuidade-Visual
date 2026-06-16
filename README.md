@@ -148,6 +148,12 @@ Polimento da interface:
 Optotipos/Testes/POLIMENTO_INTERFACE.md
 ```
 
+Teste do controle pelo celular:
+
+```text
+Optotipos/Testes/TESTE_CONTROLE_CELULAR.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.

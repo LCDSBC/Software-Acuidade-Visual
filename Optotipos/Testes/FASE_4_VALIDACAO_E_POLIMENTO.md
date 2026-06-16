@@ -159,6 +159,12 @@ Optotipos/Testes/CONFIRMACAO_MULTI_MONITOR.md
 - [ ] testar oclusao esquerda/direita;
 - [ ] confirmar estabilidade por pelo menos alguns minutos de uso.
 
+Confirmacao automatica e roteiro fisico:
+
+```text
+Optotipos/Testes/TESTE_CONTROLE_CELULAR.md
+```
+
 ## Relatorio final de campo
 
 Preencher em `Logs/ValidacaoClinica_Fase4.md`:

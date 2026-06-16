@@ -55,6 +55,7 @@ class RemoteServer:
                 self.wfile.write(encoded)
 
         self._server = ThreadingHTTPServer(("0.0.0.0", self.port), Handler)
+        self.port = int(self._server.server_address[1])
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
         return self.url()
