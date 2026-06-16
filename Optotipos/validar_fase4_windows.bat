@@ -24,7 +24,14 @@ if errorlevel 1 (
     exit /b 0
 )
 
-py ValidacaoClinica.py --saida Logs\ValidacaoClinica_Fase4.md --imprimir
+if exist Dados\validacao_campo.json (
+    echo Usando Dados\validacao_campo.json para calcular confianca clinica.
+    py ValidacaoClinica.py --entrada-campo Dados\validacao_campo.json --saida Logs\ValidacaoClinica_Fase4.md --imprimir
+) else (
+    echo Dados\validacao_campo.json nao encontrado.
+    echo Copie Dados\modelo_validacao_campo.json para Dados\validacao_campo.json e preencha as medicoes reais.
+    py ValidacaoClinica.py --saida Logs\ValidacaoClinica_Fase4.md --imprimir
+)
 if errorlevel 1 exit /b 1
 
 echo.

@@ -13,7 +13,10 @@ if str(APP_DIR) not in sys.path:
 from optotipos_core.config import load_config
 from optotipos_core.validation import (
     build_validation_report,
+    evaluate_clinical_confidence,
     expected_20_20_measurements,
+    field_validation_from_dict,
+    load_field_validation,
     measurement_result,
     portable_status,
     write_validation_report,
@@ -61,6 +64,90 @@ class Phase4ValidationTest(unittest.TestCase):
             write_validation_report(destination, root=Path(directory))
             self.assertTrue(destination.exists())
             self.assertIn("Tamanho esperado do optotipo 20/20", destination.read_text(encoding="utf-8"))
+
+    def test_clinical_confidence_is_pending_without_field_data(self) -> None:
+        confidence = evaluate_clinical_confidence(None)
+        self.assertEqual(confidence.score_percent, 0)
+        self.assertFalse(confidence.approved_for_clinic_trial)
+        self.assertIn("PENDENTE", confidence.level)
+
+    def test_clinical_confidence_is_high_when_measurements_and_checks_pass(self) -> None:
+        field = field_validation_from_dict(
+            {
+                "monitor_model": "TV teste",
+                "resolution": "3840x2160",
+                "configured_distance_m": 4,
+                "ruler_100mm_measured_mm": 100.1,
+                "optotype_20_20_4m_measured_mm": 5.82,
+                "checks": {
+                    "executaveis_abrem_sem_python": True,
+                    "pacote_portatil_copiado": True,
+                    "tela_unica_funciona": True,
+                    "duas_telas_funciona": True,
+                    "espelhamento_funciona": True,
+                    "controle_celular_funciona": True,
+                    "configuracoes_persistem": True,
+                },
+            }
+        )
+        confidence = evaluate_clinical_confidence(field)
+        self.assertEqual(confidence.level, "ALTA")
+        self.assertTrue(confidence.approved_for_clinic_trial)
+        self.assertGreaterEqual(confidence.score_percent, 90)
+
+    def test_clinical_confidence_blocks_large_physical_error(self) -> None:
+        field = field_validation_from_dict(
+            {
+                "ruler_100mm_measured_mm": 108,
+                "optotype_20_20_4m_measured_mm": 7,
+                "checks": {
+                    "executaveis_abrem_sem_python": True,
+                    "tela_unica_funciona": True,
+                },
+            }
+        )
+        confidence = evaluate_clinical_confidence(field)
+        self.assertFalse(confidence.approved_for_clinic_trial)
+        self.assertIn("erro fisico", " ".join(confidence.blockers))
+
+    def test_field_validation_can_be_loaded_from_json(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "campo.json"
+            path.write_text(
+                """{
+                  "monitor_model": "Monitor",
+                  "resolution": "1920x1080",
+                  "configured_distance_m": 4,
+                  "ruler_100mm_measured_mm": 100,
+                  "checks": {"tela_unica_funciona": true}
+                }""",
+                encoding="utf-8",
+            )
+            field = load_field_validation(path)
+            self.assertEqual(field.monitor_model, "Monitor")
+            self.assertTrue(field.checks["tela_unica_funciona"])
+
+    def test_validation_report_includes_confidence_with_field_data(self) -> None:
+        field = field_validation_from_dict(
+            {
+                "ruler_100mm_measured_mm": 100.0,
+                "optotype_20_20_4m_measured_mm": 5.8178,
+                "checks": {
+                    "executaveis_abrem_sem_python": True,
+                    "pacote_portatil_copiado": True,
+                    "tela_unica_funciona": True,
+                    "duas_telas_funciona": True,
+                    "espelhamento_funciona": True,
+                    "controle_celular_funciona": True,
+                    "configuracoes_persistem": True,
+                },
+            }
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            report = build_validation_report(root=Path(directory), field_validation=field)
+            self.assertIn("Confianca clinica", report)
+            self.assertIn("Aprovado para piloto em consultorio", report)
+            self.assertIn("Regua virtual 100 mm", report)
 
 
 if __name__ == "__main__":

@@ -168,6 +168,21 @@ Preencher em `Logs/ValidacaoClinica_Fase4.md`:
 - resultado de espelhamento;
 - resultado do controle por celular.
 
+## Confianca clinica
+
+Para calcular a confianca clinica:
+
+1. copiar `Dados/modelo_validacao_campo.json` para `Dados/validacao_campo.json`;
+2. preencher as medicoes fisicas e os checks operacionais;
+3. executar `validar_fase4_windows.bat`;
+4. revisar a secao `Confianca clinica` em `Logs/ValidacaoClinica_Fase4.md`.
+
+Documento detalhado:
+
+```text
+Optotipos/Testes/CONFIANCA_CLINICA.md
+```
+
 ## Criterio para concluir a Fase 4
 
 A fase pode ser considerada concluida quando:
@@ -181,6 +196,7 @@ A fase pode ser considerada concluida quando:
 - [ ] espelhamento funcionando;
 - [ ] controle por celular funcionando;
 - [ ] relatorio de campo preenchido.
+- [ ] confianca clinica calculada como alta ou pendencias aceitas formalmente.
 
 ## O que nao faz parte desta fase
 

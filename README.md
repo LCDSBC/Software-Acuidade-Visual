@@ -104,6 +104,26 @@ Relatorio gerado:
 Optotipos/Logs/ValidacaoClinica_Fase4.md
 ```
 
+Para calcular a confianca clinica com medicoes reais, copie:
+
+```text
+Optotipos/Dados/modelo_validacao_campo.json
+```
+
+para:
+
+```text
+Optotipos/Dados/validacao_campo.json
+```
+
+preencha os valores medidos e execute novamente `validar_fase4_windows.bat`.
+
+Guia:
+
+```text
+Optotipos/Testes/CONFIANCA_CLINICA.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.
