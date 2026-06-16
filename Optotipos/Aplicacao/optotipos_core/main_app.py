@@ -34,6 +34,27 @@ class MonitorRect:
         return f"{self.width}x{self.height}+{self.x}+{self.y}"
 
 
+@dataclass(frozen=True)
+class DisplayWindowPlan:
+    title: str
+    monitor: MonitorRect
+    fullscreen: bool
+
+
+@dataclass(frozen=True)
+class MonitorLayoutPlan:
+    requested_mode: str
+    effective_mode: str
+    main_monitor: MonitorRect
+    main_fullscreen: bool
+    display_windows: tuple[DisplayWindowPlan, ...]
+    fallback_reason: str = ""
+
+    @property
+    def total_canvases(self) -> int:
+        return 1 + len(self.display_windows)
+
+
 def detect_monitors(root: tk.Tk) -> list[MonitorRect]:
     if tk is None:
         return [MonitorRect(0, 0, 1280, 720)]
@@ -88,6 +109,61 @@ def bounded_monitor(monitors: list[MonitorRect], index: int) -> MonitorRect:
     if not monitors:
         return MonitorRect(0, 0, 1280, 720)
     return monitors[max(0, min(index, len(monitors) - 1))]
+
+
+def plan_monitor_layout(
+    mode: str,
+    monitors: list[MonitorRect],
+    examiner_index: int = 0,
+    test_index: int = 0,
+    fullscreen: bool = True,
+) -> MonitorLayoutPlan:
+    available = monitors or [MonitorRect(0, 0, 1280, 720)]
+    requested_mode = mode if mode in {"TelaUnica", "DuasTelas", "Espelhamento"} else "TelaUnica"
+
+    if requested_mode == "DuasTelas":
+        if len(available) < 2:
+            return MonitorLayoutPlan(
+                requested_mode=mode,
+                effective_mode="TelaUnica",
+                main_monitor=bounded_monitor(available, test_index),
+                main_fullscreen=fullscreen,
+                display_windows=(),
+                fallback_reason="DuasTelas requer pelo menos dois monitores detectados.",
+            )
+        return MonitorLayoutPlan(
+            requested_mode=mode,
+            effective_mode="DuasTelas",
+            main_monitor=bounded_monitor(available, examiner_index),
+            main_fullscreen=False,
+            display_windows=(DisplayWindowPlan("Exibicao de Testes", bounded_monitor(available, test_index), True),),
+        )
+
+    if requested_mode == "Espelhamento":
+        if len(available) < 2:
+            return MonitorLayoutPlan(
+                requested_mode=mode,
+                effective_mode="TelaUnica",
+                main_monitor=bounded_monitor(available, test_index),
+                main_fullscreen=fullscreen,
+                display_windows=(),
+                fallback_reason="Espelhamento requer monitores adicionais detectados.",
+            )
+        return MonitorLayoutPlan(
+            requested_mode=mode,
+            effective_mode="Espelhamento",
+            main_monitor=bounded_monitor(available, 0),
+            main_fullscreen=fullscreen,
+            display_windows=tuple(DisplayWindowPlan(f"Espelho {index}", monitor, True) for index, monitor in enumerate(available[1:], start=1)),
+        )
+
+    return MonitorLayoutPlan(
+        requested_mode=mode,
+        effective_mode="TelaUnica",
+        main_monitor=bounded_monitor(available, test_index),
+        main_fullscreen=fullscreen,
+        display_windows=(),
+    )
 
 
 class OptotiposApp:
@@ -175,23 +251,20 @@ class OptotiposApp:
     def apply_window_mode(self) -> None:
         self.monitors = detect_monitors(self.root)
         mode = self.config.get("Monitores.txt", "Modo", "TelaUnica")
-        examiner = bounded_monitor(self.monitors, self.config.get_int("Monitores.txt", "MonitorExaminador", 0))
-        test_monitor = bounded_monitor(self.monitors, self.config.get_int("Monitores.txt", "MonitorTeste", 0))
+        layout = plan_monitor_layout(
+            mode=mode,
+            monitors=self.monitors,
+            examiner_index=self.config.get_int("Monitores.txt", "MonitorExaminador", 0),
+            test_index=self.config.get_int("Monitores.txt", "MonitorTeste", 0),
+            fullscreen=self.config.get_bool("Exibicao.txt", "TelaCheia", True),
+        )
         self.destroy_display_windows()
         self.display_canvases = [self.canvas]
 
-        if mode == "DuasTelas" and len(self.monitors) > 1:
-            self.root.attributes("-fullscreen", False)
-            self.root.geometry(examiner.geometry())
-            self.create_display_window(test_monitor, "Exibicao de Testes", fullscreen=True)
-        elif mode == "Espelhamento" and len(self.monitors) > 1:
-            self.root.geometry(bounded_monitor(self.monitors, 0).geometry())
-            for index, monitor in enumerate(self.monitors[1:], start=1):
-                self.create_display_window(monitor, f"Espelho {index}", fullscreen=True)
-            self.root.attributes("-fullscreen", self.config.get_bool("Exibicao.txt", "TelaCheia", True))
-        else:
-            self.root.geometry(test_monitor.geometry())
-            self.root.attributes("-fullscreen", self.config.get_bool("Exibicao.txt", "TelaCheia", True))
+        self.root.attributes("-fullscreen", layout.main_fullscreen)
+        self.root.geometry(layout.main_monitor.geometry())
+        for display in layout.display_windows:
+            self.create_display_window(display.monitor, display.title, fullscreen=display.fullscreen)
 
     def create_display_window(self, monitor: MonitorRect, title: str, fullscreen: bool) -> None:
         window = tk.Toplevel(self.root)

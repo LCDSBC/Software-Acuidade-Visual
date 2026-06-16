@@ -143,6 +143,12 @@ No Windows, conectar TV/monitor como segunda tela.
 - [ ] confirmar janelas de exibicao nos monitores adicionais;
 - [ ] confirmar que proximo/anterior atualiza todas as telas.
 
+Confirmacao automatica da logica:
+
+```text
+Optotipos/Testes/CONFIRMACAO_MULTI_MONITOR.md
+```
+
 ### 6. Testar controle por celular
 
 - [ ] computador e celular na mesma rede Wi-Fi;

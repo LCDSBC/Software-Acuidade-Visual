@@ -136,6 +136,12 @@ Testes que exigem ativos licenciados:
 Optotipos/Testes/TESTES_PROFISSIONAIS_LICENCIADOS.md
 ```
 
+Confirmacao multi-monitor:
+
+```text
+Optotipos/Testes/CONFIRMACAO_MULTI_MONITOR.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.
