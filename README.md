@@ -83,6 +83,45 @@ Optotipos/dist/Optotipos_Portatil/
 
 Depois, copie essa pasta para pendrive, notebook, desktop ou mini PC.
 
+## Gerar arquivo baixavel pelo GitHub Actions
+
+Tambem existe uma forma automatica de gerar o pacote Windows em um runner Windows do GitHub.
+
+Workflow:
+
+```text
+.github/workflows/build-windows-portable.yml
+```
+
+Ele gera o artefato:
+
+```text
+Optotipos_Profissional_Windows_Portatil
+```
+
+Conteudo esperado:
+
+```text
+Optotipos.exe
+Configurador.exe
+Configuracoes/
+Perfis/
+Testes/
+Dados/
+Backup/
+Logs/
+Manual/
+```
+
+Como baixar:
+
+1. abrir a aba `Actions` no GitHub;
+2. abrir o workflow `Build Windows Portable Package`;
+3. selecionar a execucao mais recente;
+4. baixar o artefato `Optotipos_Profissional_Windows_Portatil`;
+5. extrair no computador Windows;
+6. executar `Optotipos.exe`.
+
 ## Validacao clinica - Fase 4
 
 Antes de usar em consultorio, siga:

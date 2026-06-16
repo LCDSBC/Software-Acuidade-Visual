@@ -43,8 +43,12 @@ xcopy /E /I /Y Testes dist\Optotipos_Portatil\Testes
 xcopy /E /I /Y Dados dist\Optotipos_Portatil\Dados
 xcopy /E /I /Y Backup dist\Optotipos_Portatil\Backup
 xcopy /E /I /Y Logs dist\Optotipos_Portatil\Logs
+xcopy /E /I /Y Manual dist\Optotipos_Portatil\Manual
 copy /Y Optotipos.exe dist\Optotipos_Portatil\Optotipos.exe
 copy /Y Configurador.exe dist\Optotipos_Portatil\Configurador.exe
+copy /Y README.md dist\Optotipos_Portatil\README.md
+copy /Y validar_fase4_windows.bat dist\Optotipos_Portatil\validar_fase4_windows.bat
+copy /Y teste_equipamento_real_windows.bat dist\Optotipos_Portatil\teste_equipamento_real_windows.bat
 
 echo Gerando relatorio de validacao inicial...
 py ValidacaoClinica.py --saida Logs\ValidacaoClinica_Fase4.md
