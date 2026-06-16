@@ -225,26 +225,26 @@ def draw_symbol(
     rng: random.Random,
 ) -> None:
     if renderer == "directional":
-        angle = transform_angle(options, rng.choice(ROTATIONS))
-        draw_grid_optotype(canvas, x, y, size, stroke, "E", options.foreground, angle)
+        angle = (rng.choice(ROTATIONS) + options.rotation) % 360
+        draw_grid_optotype(canvas, x, y, size, stroke, "E", options.foreground, angle, options.horizontal_mirror, options.vertical_mirror)
     elif renderer == "landolt":
         draw_landolt_c(canvas, x, y, size, stroke, transform_angle(options, rng.choice(ROTATIONS)), options.foreground)
     elif renderer == "shapes":
         draw_shape(canvas, x, y, size, symbol, options.foreground)
     else:
-        draw_grid_optotype(canvas, x, y, size, stroke, symbol, options.foreground, options.rotation)
+        draw_grid_optotype(canvas, x, y, size, stroke, symbol, options.foreground, options.rotation, options.horizontal_mirror, options.vertical_mirror)
 
 
-def draw_grid_optotype(canvas: Canvas, x: float, y: float, size: int, stroke: int, symbol: str, color: str, angle: int = 0) -> None:
+def draw_grid_optotype(canvas: Canvas, x: float, y: float, size: int, stroke: int, symbol: str, color: str, angle: int = 0, mirror_x: bool = False, mirror_y: bool = False) -> None:
     symbol = symbol.upper()
     if symbol == "E":
-        draw_cell_pattern(canvas, x, y, size, e_pattern_cells(), color, angle)
+        draw_cell_pattern(canvas, x, y, size, e_pattern_cells(), color, angle, mirror_x, mirror_y)
     elif symbol in {"C", "D", "H", "O", "S"}:
-        draw_cell_pattern(canvas, x, y, size, block_letter_cells(symbol), color, angle)
+        draw_cell_pattern(canvas, x, y, size, block_letter_cells(symbol), color, angle, mirror_x, mirror_y)
     elif symbol in {"K", "N", "R", "V", "Z"}:
-        draw_stroked_letter(canvas, x, y, size, stroke, symbol, color, angle)
+        draw_stroked_letter(canvas, x, y, size, stroke, symbol, color, angle, mirror_x, mirror_y)
     else:
-        draw_cell_pattern(canvas, x, y, size, block_letter_cells("O"), color, angle)
+        draw_cell_pattern(canvas, x, y, size, block_letter_cells("O"), color, angle, mirror_x, mirror_y)
 
 
 def e_pattern_cells() -> set[tuple[int, int]]:
@@ -263,14 +263,14 @@ def block_letter_cells(symbol: str) -> set[tuple[int, int]]:
     return {(col, 0) for col in range(5)} | {(col, 4) for col in range(5)} | {(0, row) for row in range(5)} | {(4, row) for row in range(5)}
 
 
-def draw_cell_pattern(canvas: Canvas, x: float, y: float, size: int, cells: set[tuple[int, int]], color: str, angle: int = 0) -> None:
+def draw_cell_pattern(canvas: Canvas, x: float, y: float, size: int, cells: set[tuple[int, int]], color: str, angle: int = 0, mirror_x: bool = False, mirror_y: bool = False) -> None:
     cell = size / OPTOTYPE_GRID
     for col, row in cells:
-        points = rotated_cell_points(x, y, size, col, row, angle)
+        points = rotated_cell_points(x, y, size, col, row, angle, mirror_x, mirror_y)
         canvas.create_polygon(*points, fill=color, outline=color)
 
 
-def rotated_cell_points(x: float, y: float, size: int, col: int, row: int, angle: int) -> list[float]:
+def rotated_cell_points(x: float, y: float, size: int, col: int, row: int, angle: int, mirror_x: bool = False, mirror_y: bool = False) -> list[float]:
     cell = size / OPTOTYPE_GRID
     left = -size / 2 + col * cell
     top = -size / 2 + row * cell
@@ -280,11 +280,15 @@ def rotated_cell_points(x: float, y: float, size: int, col: int, row: int, angle
     cos_a = math.cos(radians)
     sin_a = math.sin(radians)
     for px, py in points:
+        if mirror_x:
+            px = -px
+        if mirror_y:
+            py = -py
         rotated.extend((x + px * cos_a - py * sin_a, y + px * sin_a + py * cos_a))
     return rotated
 
 
-def draw_stroked_letter(canvas: Canvas, x: float, y: float, size: int, stroke: int, symbol: str, color: str, angle: int = 0) -> None:
+def draw_stroked_letter(canvas: Canvas, x: float, y: float, size: int, stroke: int, symbol: str, color: str, angle: int = 0, mirror_x: bool = False, mirror_y: bool = False) -> None:
     half = size / 2
     cell = size / OPTOTYPE_GRID
     segments = {
@@ -295,12 +299,16 @@ def draw_stroked_letter(canvas: Canvas, x: float, y: float, size: int, stroke: i
         "Z": [(-half, -half + cell / 2, half, -half + cell / 2), (half - cell / 2, -half + cell, -half + cell / 2, half - cell), (-half, half - cell / 2, half, half - cell / 2)],
     }.get(symbol, [])
     for x1, y1, x2, y2 in segments:
-        rx1, ry1 = rotate_point(x1, y1, angle)
-        rx2, ry2 = rotate_point(x2, y2, angle)
+        rx1, ry1 = rotate_point(x1, y1, angle, mirror_x, mirror_y)
+        rx2, ry2 = rotate_point(x2, y2, angle, mirror_x, mirror_y)
         canvas.create_line(x + rx1, y + ry1, x + rx2, y + ry2, fill=color, width=stroke, capstyle="projecting", joinstyle="miter")
 
 
-def rotate_point(px: float, py: float, angle: int) -> tuple[float, float]:
+def rotate_point(px: float, py: float, angle: int, mirror_x: bool = False, mirror_y: bool = False) -> tuple[float, float]:
+    if mirror_x:
+        px = -px
+    if mirror_y:
+        py = -py
     radians = math.radians(angle % 360)
     return (px * math.cos(radians) - py * math.sin(radians), px * math.sin(radians) + py * math.cos(radians))
 
@@ -360,7 +368,7 @@ def draw_duochrome(canvas: Canvas, width: int, height: int, calibration: Display
     for x_offset in (0, width / 2):
         positions = centered_positions(width / 2, 4, size * 1.45)
         for x, symbol in zip([position + x_offset for position in positions], ("O", "C", "D", "K")):
-            draw_grid_optotype(canvas, x, height * 0.55, size, stroke, symbol, "white", 0)
+            draw_grid_optotype(canvas, x, height * 0.55, size, stroke, symbol, "white", 0, options.horizontal_mirror, options.vertical_mirror)
 
 
 def draw_astigmatic_clock(canvas: Canvas, width: int, height: int, state: RenderState, options: RenderOptions) -> None:

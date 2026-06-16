@@ -22,6 +22,45 @@ tests/test_monitor_modes.py
 
 ## Modos confirmados por teste automatizado
 
+## Inversao de tela / efeito espelho
+
+A confirmacao multi-monitor tambem cobre:
+
+- espelhamento horizontal;
+- espelhamento vertical;
+- propagacao da inversao para a janela principal;
+- propagacao da inversao para a janela de teste em `DuasTelas`;
+- propagacao da inversao para todas as janelas em `Espelhamento`.
+
+Configuracao:
+
+```text
+Configuracoes/Inversao.txt
+```
+
+Exemplos:
+
+```text
+Horizontal=ON
+Vertical=OFF
+Rotacao=0
+```
+
+ou:
+
+```text
+Horizontal=ON
+Vertical=ON
+Rotacao=180
+```
+
+Confirmado por teste automatizado:
+
+- o plano multi-monitor preserva `horizontal_mirror`;
+- o plano multi-monitor preserva `vertical_mirror`;
+- janelas extras recebem os mesmos flags de espelho;
+- a geometria vetorial dos optotipos reflete coordenadas horizontalmente/verticalmente.
+
 ### TelaUnica
 
 Confirmado:
@@ -29,6 +68,7 @@ Confirmado:
 - usa o monitor configurado como monitor de teste;
 - respeita tela cheia ligada/desligada;
 - cria apenas um canvas de exibicao.
+- aplica inversao horizontal/vertical configurada.
 
 ### DuasTelas
 
@@ -38,6 +78,7 @@ Confirmado com dois monitores simulados:
 - segundo monitor recebe janela separada de exibicao;
 - janela de teste entra em tela cheia;
 - total de canvases: 2.
+- janela de teste recebe a mesma inversao horizontal/vertical.
 
 Fallback confirmado:
 
@@ -52,6 +93,7 @@ Confirmado com tres monitores simulados:
 - monitores extras recebem janelas `Espelho 1`, `Espelho 2`, etc.;
 - cada monitor adicional recebe uma janela de exibicao;
 - total de canvases = numero de monitores.
+- todas as janelas espelhadas recebem a mesma inversao horizontal/vertical.
 
 Fallback confirmado:
 
@@ -69,6 +111,8 @@ Ainda precisa validar em campo:
 - Windows em modo "Estender";
 - Windows em modo "Duplicar";
 - tela cheia real no monitor de teste;
+- efeito espelho horizontal em monitor/TV real;
+- efeito espelho vertical em monitor/TV real;
 - coordenadas corretas quando a TV esta a esquerda/direita/acima;
 - troca em tempo real pelo botao `Modo Monitor`;
 - sincronizacao visual entre janelas espelhadas.

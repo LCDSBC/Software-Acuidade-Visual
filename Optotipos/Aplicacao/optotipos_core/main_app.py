@@ -39,6 +39,8 @@ class DisplayWindowPlan:
     title: str
     monitor: MonitorRect
     fullscreen: bool
+    horizontal_mirror: bool = False
+    vertical_mirror: bool = False
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,8 @@ class MonitorLayoutPlan:
     main_monitor: MonitorRect
     main_fullscreen: bool
     display_windows: tuple[DisplayWindowPlan, ...]
+    horizontal_mirror: bool = False
+    vertical_mirror: bool = False
     fallback_reason: str = ""
 
     @property
@@ -117,6 +121,8 @@ def plan_monitor_layout(
     examiner_index: int = 0,
     test_index: int = 0,
     fullscreen: bool = True,
+    horizontal_mirror: bool = False,
+    vertical_mirror: bool = False,
 ) -> MonitorLayoutPlan:
     available = monitors or [MonitorRect(0, 0, 1280, 720)]
     requested_mode = mode if mode in {"TelaUnica", "DuasTelas", "Espelhamento"} else "TelaUnica"
@@ -129,6 +135,8 @@ def plan_monitor_layout(
                 main_monitor=bounded_monitor(available, test_index),
                 main_fullscreen=fullscreen,
                 display_windows=(),
+                horizontal_mirror=horizontal_mirror,
+                vertical_mirror=vertical_mirror,
                 fallback_reason="DuasTelas requer pelo menos dois monitores detectados.",
             )
         return MonitorLayoutPlan(
@@ -136,7 +144,9 @@ def plan_monitor_layout(
             effective_mode="DuasTelas",
             main_monitor=bounded_monitor(available, examiner_index),
             main_fullscreen=False,
-            display_windows=(DisplayWindowPlan("Exibicao de Testes", bounded_monitor(available, test_index), True),),
+            display_windows=(DisplayWindowPlan("Exibicao de Testes", bounded_monitor(available, test_index), True, horizontal_mirror, vertical_mirror),),
+            horizontal_mirror=horizontal_mirror,
+            vertical_mirror=vertical_mirror,
         )
 
     if requested_mode == "Espelhamento":
@@ -147,6 +157,8 @@ def plan_monitor_layout(
                 main_monitor=bounded_monitor(available, test_index),
                 main_fullscreen=fullscreen,
                 display_windows=(),
+                horizontal_mirror=horizontal_mirror,
+                vertical_mirror=vertical_mirror,
                 fallback_reason="Espelhamento requer monitores adicionais detectados.",
             )
         return MonitorLayoutPlan(
@@ -154,7 +166,9 @@ def plan_monitor_layout(
             effective_mode="Espelhamento",
             main_monitor=bounded_monitor(available, 0),
             main_fullscreen=fullscreen,
-            display_windows=tuple(DisplayWindowPlan(f"Espelho {index}", monitor, True) for index, monitor in enumerate(available[1:], start=1)),
+            display_windows=tuple(DisplayWindowPlan(f"Espelho {index}", monitor, True, horizontal_mirror, vertical_mirror) for index, monitor in enumerate(available[1:], start=1)),
+            horizontal_mirror=horizontal_mirror,
+            vertical_mirror=vertical_mirror,
         )
 
     return MonitorLayoutPlan(
@@ -163,6 +177,8 @@ def plan_monitor_layout(
         main_monitor=bounded_monitor(available, test_index),
         main_fullscreen=fullscreen,
         display_windows=(),
+        horizontal_mirror=horizontal_mirror,
+        vertical_mirror=vertical_mirror,
     )
 
 
@@ -257,6 +273,8 @@ class OptotiposApp:
             examiner_index=self.config.get_int("Monitores.txt", "MonitorExaminador", 0),
             test_index=self.config.get_int("Monitores.txt", "MonitorTeste", 0),
             fullscreen=self.config.get_bool("Exibicao.txt", "TelaCheia", True),
+            horizontal_mirror=self.config.get_bool("Inversao.txt", "Horizontal", False),
+            vertical_mirror=self.config.get_bool("Inversao.txt", "Vertical", False),
         )
         self.destroy_display_windows()
         self.display_canvases = [self.canvas]

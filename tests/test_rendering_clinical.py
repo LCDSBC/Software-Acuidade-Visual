@@ -197,6 +197,24 @@ class ClinicalRenderingTest(unittest.TestCase):
         self.assertAlmostEqual(rotate_point(10, 0, 90)[0], 0, places=6)
         self.assertAlmostEqual(rotate_point(10, 0, 90)[1], 10, places=6)
 
+    def test_horizontal_mirror_reflects_cell_geometry(self) -> None:
+        normal = rotated_cell_points(50, 50, 100, 0, 0, 0)
+        mirrored = rotated_cell_points(50, 50, 100, 0, 0, 0, mirror_x=True)
+        normal_x = normal[0::2]
+        mirrored_x = mirrored[0::2]
+        self.assertEqual(sorted(round(x, 6) for x in mirrored_x), sorted(round(100 - x, 6) for x in normal_x))
+
+    def test_vertical_mirror_reflects_cell_geometry(self) -> None:
+        normal = rotated_cell_points(50, 50, 100, 0, 0, 0)
+        mirrored = rotated_cell_points(50, 50, 100, 0, 0, 0, mirror_y=True)
+        normal_y = normal[1::2]
+        mirrored_y = mirrored[1::2]
+        self.assertEqual(sorted(round(y, 6) for y in mirrored_y), sorted(round(100 - y, 6) for y in normal_y))
+
+    def test_rotate_point_supports_mirror_effect(self) -> None:
+        self.assertEqual(rotate_point(10, 5, 0, mirror_x=True), (-10.0, 5.0))
+        self.assertEqual(rotate_point(10, 5, 0, mirror_y=True), (10.0, -5.0))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -48,6 +48,14 @@ class MonitorModeTest(unittest.TestCase):
         self.assertTrue(plan.display_windows[0].fullscreen)
         self.assertEqual(plan.total_canvases, 2)
 
+    def test_duas_telas_preserves_mirror_flags(self) -> None:
+        monitors = [MonitorRect(0, 0, 1920, 1080), MonitorRect(1920, 0, 1920, 1080)]
+        plan = plan_monitor_layout("DuasTelas", monitors, horizontal_mirror=True, vertical_mirror=True)
+        self.assertTrue(plan.horizontal_mirror)
+        self.assertTrue(plan.vertical_mirror)
+        self.assertTrue(plan.display_windows[0].horizontal_mirror)
+        self.assertTrue(plan.display_windows[0].vertical_mirror)
+
     def test_duas_telas_falls_back_with_single_monitor(self) -> None:
         monitors = [MonitorRect(0, 0, 1920, 1080)]
         plan = plan_monitor_layout("DuasTelas", monitors, fullscreen=True)
@@ -67,6 +75,17 @@ class MonitorModeTest(unittest.TestCase):
         self.assertEqual([display.monitor for display in plan.display_windows], monitors[1:])
         self.assertEqual([display.title for display in plan.display_windows], ["Espelho 1", "Espelho 2"])
         self.assertEqual(plan.total_canvases, 3)
+
+    def test_espelhamento_preserves_horizontal_mirror_in_all_windows(self) -> None:
+        monitors = [
+            MonitorRect(0, 0, 1920, 1080),
+            MonitorRect(1920, 0, 1920, 1080),
+            MonitorRect(3840, 0, 1280, 720),
+        ]
+        plan = plan_monitor_layout("Espelhamento", monitors, horizontal_mirror=True)
+        self.assertTrue(plan.horizontal_mirror)
+        self.assertTrue(all(display.horizontal_mirror for display in plan.display_windows))
+        self.assertFalse(any(display.vertical_mirror for display in plan.display_windows))
 
     def test_espelhamento_falls_back_with_single_monitor(self) -> None:
         plan = plan_monitor_layout("Espelhamento", [MonitorRect(0, 0, 1920, 1080)], fullscreen=False)
