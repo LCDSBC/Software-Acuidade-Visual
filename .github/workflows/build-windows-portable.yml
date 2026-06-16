@@ -42,9 +42,28 @@ jobs:
           if (!(Test-Path "$package/Configuracoes/Distancia.txt")) { throw "Distancia.txt not found" }
           if (!(Test-Path "$package/Manual/MANUAL_DE_USO.md")) { throw "Manual not found" }
 
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+          if (!(Test-Path $iscc)) { throw "ISCC.exe not found" }
+          & $iscc "Optotipos\Installer\OptotiposProfissional.iss"
+          if (!(Test-Path "Optotipos\dist\Optotipos_Profissional_Setup.exe")) { throw "Installer was not generated" }
+
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@v4
         with:
           name: Optotipos_Profissional_Windows_Portatil
           path: Optotipos/dist/Optotipos_Portatil
+          if-no-files-found: error
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Optotipos_Profissional_Setup
+          path: Optotipos/dist/Optotipos_Profissional_Setup.exe
           if-no-files-found: error

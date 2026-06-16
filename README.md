@@ -99,6 +99,12 @@ Ele gera o artefato:
 Optotipos_Profissional_Windows_Portatil
 ```
 
+E tambem o instalador:
+
+```text
+Optotipos_Profissional_Setup
+```
+
 Conteudo esperado:
 
 ```text
@@ -118,9 +124,11 @@ Como baixar:
 1. abrir a aba `Actions` no GitHub;
 2. abrir o workflow `Build Windows Portable Package`;
 3. selecionar a execucao mais recente;
-4. baixar o artefato `Optotipos_Profissional_Windows_Portatil`;
-5. extrair no computador Windows;
-6. executar `Optotipos.exe`.
+4. baixar uma das opcoes:
+   - `Optotipos_Profissional_Setup`: instalador tradicional;
+   - `Optotipos_Profissional_Windows_Portatil`: pasta portatil;
+5. se baixar o instalador, execute `Optotipos_Profissional_Setup.exe`;
+6. se baixar o portatil, extraia a pasta e execute `Optotipos.exe`.
 
 ## Validacao clinica - Fase 4
 
