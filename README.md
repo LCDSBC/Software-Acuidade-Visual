@@ -160,6 +160,26 @@ Teste em equipamento real:
 Optotipos/Testes/TESTE_EQUIPAMENTO_REAL.md
 ```
 
+## Fase 9 - Manual de uso
+
+Manual principal:
+
+```text
+Optotipos/Manual/MANUAL_DE_USO.md
+```
+
+Guia rapido:
+
+```text
+Optotipos/Manual/GUIA_RAPIDO.md
+```
+
+Solucao de problemas:
+
+```text
+Optotipos/Manual/SOLUCAO_DE_PROBLEMAS.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.
