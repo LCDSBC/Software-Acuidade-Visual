@@ -23,6 +23,20 @@ from .rendering import RenderOptions, RenderState, SNELLEN_DENOMINATORS, render_
 from .wireless import RemoteServer
 
 
+APP_TITLE = "Optotipos Profissional"
+APP_SUBTITLE = "Nucleo clinico de apresentacao visual"
+SHORTCUT_HINTS = (
+    "←/→ testes",
+    "+/- tamanho",
+    "R aleatorio",
+    "B fundo",
+    "H/V espelho",
+    "M monitor",
+    "F tela cheia",
+    "Ctrl+Alt+C configurador",
+)
+
+
 @dataclass(frozen=True)
 class MonitorRect:
     x: int
@@ -115,6 +129,23 @@ def bounded_monitor(monitors: list[MonitorRect], index: int) -> MonitorRect:
     return monitors[max(0, min(index, len(monitors) - 1))]
 
 
+def shortcut_hint_text() -> str:
+    return "   |   ".join(SHORTCUT_HINTS)
+
+
+def mirror_status_text(horizontal: bool, vertical: bool) -> str:
+    enabled = []
+    if horizontal:
+        enabled.append("H")
+    if vertical:
+        enabled.append("V")
+    return "Espelho " + ("+".join(enabled) if enabled else "OFF")
+
+
+def format_status_text(test_name: str, distance_m: float, mode: str, monitor_count: int, horizontal_mirror: bool, vertical_mirror: bool) -> str:
+    return f"{test_name} | Distancia {distance_m:g} m | {mode} | {monitor_count} monitor(es) | {mirror_status_text(horizontal_mirror, vertical_mirror)}"
+
+
 def plan_monitor_layout(
     mode: str,
     monitors: list[MonitorRect],
@@ -198,8 +229,9 @@ class OptotiposApp:
         self.display_canvases: list[tk.Canvas] = []
         self.monitors: list[MonitorRect] = []
 
-        self.root.title("Optotipos Profissional")
+        self.root.title(APP_TITLE)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
+        self.configure_style()
         self.build_ui()
         self.bind_shortcuts()
         self.apply_window_mode()
@@ -207,38 +239,77 @@ class OptotiposApp:
         self.render()
 
     def build_ui(self) -> None:
-        self.toolbar = ttk.Frame(self.root)
+        container = ttk.Frame(self.root, style="App.TFrame")
+        container.pack(fill="both", expand=True)
+
+        self.toolbar = ttk.Frame(container, style="Toolbar.TFrame", padding=(10, 7))
         if self.config.get_bool("Exibicao.txt", "BarraFerramentas", True):
             self.toolbar.pack(side="top", fill="x")
 
-        ttk.Label(self.toolbar, text="Categoria").pack(side="left", padx=(8, 4))
-        self.category_combo = ttk.Combobox(self.toolbar, textvariable=self.current_category, values=categories(), state="readonly", width=22)
-        self.category_combo.pack(side="left", padx=4)
+        brand = ttk.Frame(self.toolbar, style="Toolbar.TFrame")
+        brand.pack(side="left", padx=(0, 16))
+        ttk.Label(brand, text=APP_TITLE, style="Brand.TLabel").pack(anchor="w")
+        ttk.Label(brand, text=APP_SUBTITLE, style="Subtitle.TLabel").pack(anchor="w")
+
+        selectors = ttk.Frame(self.toolbar, style="Toolbar.TFrame")
+        selectors.pack(side="left", padx=(0, 12))
+        ttk.Label(selectors, text="Categoria", style="ToolbarLabel.TLabel").grid(row=0, column=0, sticky="w")
+        self.category_combo = ttk.Combobox(selectors, textvariable=self.current_category, values=categories(), state="readonly", width=22)
+        self.category_combo.grid(row=1, column=0, sticky="w", padx=(0, 8))
         self.category_combo.bind("<<ComboboxSelected>>", self.on_category_changed)
 
-        ttk.Label(self.toolbar, text="Teste").pack(side="left", padx=(10, 4))
-        self.test_combo = ttk.Combobox(self.toolbar, state="readonly", width=28)
-        self.test_combo.pack(side="left", padx=4)
+        ttk.Label(selectors, text="Teste", style="ToolbarLabel.TLabel").grid(row=0, column=1, sticky="w")
+        self.test_combo = ttk.Combobox(selectors, state="readonly", width=28)
+        self.test_combo.grid(row=1, column=1, sticky="w")
         self.test_combo.bind("<<ComboboxSelected>>", self.on_test_changed)
         self.refresh_test_combo()
 
+        navigation = ttk.Frame(self.toolbar, style="Toolbar.TFrame")
+        navigation.pack(side="left", padx=(0, 10))
         for label, command in (
-            ("Anterior", self.previous_test),
-            ("Proximo", self.next_test),
-            ("Menor", self.smaller),
-            ("Maior", self.bigger),
+            ("< Anterior", self.previous_test),
+            ("Proximo >", self.next_test),
+            ("- Menor", self.smaller),
+            ("+ Maior", self.bigger),
             ("Aleatorio", self.toggle_random),
+        ):
+            ttk.Button(navigation, text=label, command=command, style="Toolbar.TButton").pack(side="left", padx=2)
+
+        system_controls = ttk.Frame(self.toolbar, style="Toolbar.TFrame")
+        system_controls.pack(side="right")
+        for label, command in (
             ("Modo Monitor", self.cycle_monitor_mode),
             ("Wireless", self.toggle_wireless),
-            ("Configuracoes Avancadas", self.open_configurator),
+            ("Configuracoes", self.open_configurator),
         ):
-            ttk.Button(self.toolbar, text=label, command=command).pack(side="left", padx=3)
+            ttk.Button(system_controls, text=label, command=command, style="Primary.TButton").pack(side="left", padx=2)
 
-        ttk.Label(self.toolbar, textvariable=self.status_text).pack(side="left", padx=12)
-        self.canvas = tk.Canvas(self.root, highlightthickness=0)
+        self.canvas = tk.Canvas(container, highlightthickness=0)
         self.canvas.pack(side="top", fill="both", expand=True)
         self.canvas.bind("<Configure>", lambda _event: self.render())
         self.display_canvases = [self.canvas]
+
+        self.status_bar = ttk.Frame(container, style="Status.TFrame", padding=(10, 5))
+        self.status_bar.pack(side="bottom", fill="x")
+        ttk.Label(self.status_bar, textvariable=self.status_text, style="Status.TLabel").pack(side="left")
+        ttk.Label(self.status_bar, text=shortcut_hint_text(), style="Shortcut.TLabel").pack(side="right")
+
+    def configure_style(self) -> None:
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("App.TFrame", background="#111827")
+        style.configure("Toolbar.TFrame", background="#f8fafc")
+        style.configure("Status.TFrame", background="#111827")
+        style.configure("Brand.TLabel", background="#f8fafc", foreground="#0f172a", font=("Segoe UI", 13, "bold"))
+        style.configure("Subtitle.TLabel", background="#f8fafc", foreground="#475569", font=("Segoe UI", 9))
+        style.configure("ToolbarLabel.TLabel", background="#f8fafc", foreground="#334155", font=("Segoe UI", 9, "bold"))
+        style.configure("Status.TLabel", background="#111827", foreground="#e5e7eb", font=("Segoe UI", 10))
+        style.configure("Shortcut.TLabel", background="#111827", foreground="#94a3b8", font=("Segoe UI", 9))
+        style.configure("Toolbar.TButton", padding=(8, 4))
+        style.configure("Primary.TButton", padding=(9, 4))
 
     def bind_shortcuts(self) -> None:
         self.root.bind("<Right>", lambda _event: self.next_test())
@@ -346,7 +417,7 @@ class OptotiposApp:
             if canvas.winfo_exists():
                 render_test(canvas, self.current_test, self.calibration, self.state, options)
         mode = self.config.get("Monitores.txt", "Modo", "TelaUnica")
-        self.status_text.set(f"{self.current_test.name} | {self.calibration.distance_m:g} m | {mode} ({len(self.monitors)} monitor(es))")
+        self.status_text.set(format_status_text(self.current_test.name, self.calibration.distance_m, mode, len(self.monitors), options.horizontal_mirror, options.vertical_mirror))
 
     def next_test(self) -> None:
         self.current_index = (self.current_index + 1) % len(TESTS)

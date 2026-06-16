@@ -142,6 +142,12 @@ Confirmacao multi-monitor:
 Optotipos/Testes/CONFIRMACAO_MULTI_MONITOR.md
 ```
 
+Polimento da interface:
+
+```text
+Optotipos/Testes/POLIMENTO_INTERFACE.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.

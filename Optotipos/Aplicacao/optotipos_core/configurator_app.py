@@ -22,6 +22,10 @@ from .config import (
 from .paths import ensure_portable_tree, log_path
 
 
+CONFIGURATOR_TITLE = "Configurador Clinico"
+CONFIGURATOR_SUBTITLE = "Calibracao, perfis, monitores e backup portatil"
+
+
 class ConfiguratorApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -33,12 +37,21 @@ class ConfiguratorApp:
         self.status = tk.StringVar(value=f"Pasta portatil: {self.home}")
         self.report_text = tk.StringVar(value="")
         self.root.title("Configurador - Optotipos Profissional")
-        self.root.geometry("980x680")
+        self.root.geometry("1040x720")
+        self.configure_style()
         self.build_ui()
 
     def build_ui(self) -> None:
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        container = ttk.Frame(self.root, style="Config.App.TFrame")
+        container.pack(fill="both", expand=True)
+
+        header = ttk.Frame(container, style="Config.Header.TFrame", padding=(14, 10))
+        header.pack(fill="x")
+        ttk.Label(header, text=CONFIGURATOR_TITLE, style="Config.Title.TLabel").pack(anchor="w")
+        ttk.Label(header, text=CONFIGURATOR_SUBTITLE, style="Config.Subtitle.TLabel").pack(anchor="w")
+
+        notebook = ttk.Notebook(container)
+        notebook.pack(fill="both", expand=True, padx=12, pady=12)
 
         self.build_screen_tab(notebook)
         self.build_distance_tab(notebook)
@@ -47,15 +60,30 @@ class ConfiguratorApp:
         self.build_backup_tab(notebook)
         self.build_shortcuts_tab(notebook)
 
-        footer = ttk.Frame(self.root)
-        footer.pack(fill="x", padx=10, pady=(0, 10))
-        ttk.Label(footer, textvariable=self.status).pack(side="left")
-        ttk.Button(footer, text="Salvar tudo", command=self.save_all).pack(side="right", padx=4)
+        footer = ttk.Frame(container, style="Config.Footer.TFrame", padding=(12, 8))
+        footer.pack(fill="x")
+        ttk.Label(footer, textvariable=self.status, style="Config.Status.TLabel").pack(side="left")
+        ttk.Button(footer, text="Salvar tudo", command=self.save_all, style="Config.Primary.TButton").pack(side="right", padx=4)
         ttk.Button(footer, text="Recarregar", command=self.reload).pack(side="right", padx=4)
+
+    def configure_style(self) -> None:
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("Config.App.TFrame", background="#f1f5f9")
+        style.configure("Config.Header.TFrame", background="#0f172a")
+        style.configure("Config.Footer.TFrame", background="#e2e8f0")
+        style.configure("Config.Title.TLabel", background="#0f172a", foreground="#ffffff", font=("Segoe UI", 15, "bold"))
+        style.configure("Config.Subtitle.TLabel", background="#0f172a", foreground="#cbd5e1", font=("Segoe UI", 10))
+        style.configure("Config.Status.TLabel", background="#e2e8f0", foreground="#334155", font=("Segoe UI", 9))
+        style.configure("Config.Primary.TButton", padding=(10, 5))
 
     def build_screen_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Tela e monitores")
+        ttk.Label(frame, text="Configure o tamanho fisico, resolucao e modo de exibicao antes de usar em consultorio.").pack(anchor="w", padx=12, pady=(12, 0))
         group = ttk.LabelFrame(frame, text="Tela fisica e resolucao")
         group.pack(fill="x", padx=12, pady=12)
         self.field(group, "Tela.txt", "Polegadas", "Polegadas", 0)
@@ -79,6 +107,7 @@ class ConfiguratorApp:
     def build_distance_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Distancia e escala")
+        ttk.Label(frame, text="A distancia e a regua virtual definem o tamanho fisico dos optotipos. Valide com regua real.").pack(anchor="w", padx=12, pady=(12, 0))
         group = ttk.LabelFrame(frame, text="Distancia de exame")
         group.pack(fill="x", padx=12, pady=12)
         self.field(group, "Distancia.txt", "Distancia", "Distancia", 0)
@@ -106,6 +135,7 @@ class ConfiguratorApp:
     def build_inversion_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Inversao")
+        ttk.Label(frame, text="Use inversao horizontal/vertical para sistemas com espelhos, projetores ou montagem optica invertida.").pack(anchor="w", padx=12, pady=(12, 0))
         group = ttk.LabelFrame(frame, text="Inversao e rotacao")
         group.pack(fill="x", padx=12, pady=12)
         self.combo(group, "Inversao.txt", "Horizontal", "Espelhamento horizontal", ("OFF", "ON"), 0)
@@ -116,6 +146,7 @@ class ConfiguratorApp:
     def build_profiles_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Perfis")
+        ttk.Label(frame, text="Salve perfis diferentes para consultorio, TV, projetor ou distancias especificas.").pack(anchor="w", padx=12, pady=(12, 0))
         left = ttk.Frame(frame)
         left.pack(side="left", fill="both", expand=True, padx=12, pady=12)
         right = ttk.Frame(frame)
@@ -133,6 +164,7 @@ class ConfiguratorApp:
     def build_backup_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Backup")
+        ttk.Label(frame, text="Use backup antes de transportar o software para outro computador ou pendrive.").pack(anchor="w", padx=12, pady=(12, 0))
         ttk.Label(frame, text="Exporta todas as configuracoes e perfis para BackupCalibracao.opt.").pack(anchor="w", padx=12, pady=(20, 8))
         ttk.Button(frame, text="Exportar Configuracao", command=self.export_backup_clicked).pack(anchor="w", padx=12, pady=6)
         ttk.Button(frame, text="Importar Configuracao", command=self.import_backup_clicked).pack(anchor="w", padx=12, pady=6)
@@ -140,6 +172,7 @@ class ConfiguratorApp:
     def build_shortcuts_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Atalhos")
+        ttk.Label(frame, text="Atalhos principais usados no exame. Ajustes avancados podem ser feitos editando Atalhos.txt.").pack(anchor="w", padx=12, pady=(12, 0))
         group = ttk.LabelFrame(frame, text="Teclado e controle")
         group.pack(fill="x", padx=12, pady=12)
         for row, key in enumerate(("ConfiguracoesAvancadas", "ProximoTeste", "TesteAnterior", "Aumentar", "Diminuir", "Aleatorio")):
