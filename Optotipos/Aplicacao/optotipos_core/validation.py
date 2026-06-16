@@ -79,8 +79,15 @@ class PortableStatus:
 
 @dataclass(frozen=True)
 class FieldValidation:
+    operator_name: str
+    test_date: str
+    computer_model: str
+    os_version: str
+    gpu_or_adapter: str
     monitor_model: str
     resolution: str
+    connection_type: str
+    room_lighting: str
     configured_distance_m: float
     ruler_100mm_measured_mm: float | None
     optotype_20_20_4m_measured_mm: float | None
@@ -341,8 +348,15 @@ def measurement_result(label: str, expected_mm: float, measured_mm: float, limit
 def field_validation_from_dict(data: dict[str, object]) -> FieldValidation:
     checks = {name: bool(data.get("checks", {}).get(name, False)) if isinstance(data.get("checks"), dict) else False for name in OPERATIONAL_CHECKS}
     return FieldValidation(
+        operator_name=str(data.get("operator_name", "")),
+        test_date=str(data.get("test_date", "")),
+        computer_model=str(data.get("computer_model", "")),
+        os_version=str(data.get("os_version", "")),
+        gpu_or_adapter=str(data.get("gpu_or_adapter", "")),
         monitor_model=str(data.get("monitor_model", "")),
         resolution=str(data.get("resolution", "")),
+        connection_type=str(data.get("connection_type", "")),
+        room_lighting=str(data.get("room_lighting", "")),
         configured_distance_m=float(data.get("configured_distance_m", 4.0)),
         ruler_100mm_measured_mm=optional_float(data.get("ruler_100mm_measured_mm")),
         optotype_20_20_4m_measured_mm=optional_float(data.get("optotype_20_20_4m_measured_mm")),
@@ -485,6 +499,10 @@ def build_validation_report(config: RuntimeConfig | None = None, root: Path | No
         "",
         *confidence.as_lines(),
         "",
+        "## Equipamento real testado",
+        "",
+        *field_validation_lines(field_validation),
+        "",
         "## Validacao matematica dos optotipos",
         "",
         f"Pontuacao: {optotype_summary.score_percent:.1f}%",
@@ -572,6 +590,27 @@ def build_validation_report(config: RuntimeConfig | None = None, root: Path | No
         ]
     )
     return "\n".join(lines) + "\n"
+
+
+def field_validation_lines(field: FieldValidation | None) -> list[str]:
+    if field is None:
+        return [
+            "Nenhum arquivo de campo informado.",
+            "Preencha `Dados/validacao_campo.json` durante o teste em Windows/TV real.",
+        ]
+    return [
+        f"Operador: {field.operator_name or 'nao informado'}",
+        f"Data do teste: {field.test_date or 'nao informada'}",
+        f"Computador: {field.computer_model or 'nao informado'}",
+        f"Sistema operacional: {field.os_version or 'nao informado'}",
+        f"GPU/adaptador: {field.gpu_or_adapter or 'nao informado'}",
+        f"Monitor/TV: {field.monitor_model or 'nao informado'}",
+        f"Resolucao: {field.resolution or 'nao informada'}",
+        f"Conexao: {field.connection_type or 'nao informada'}",
+        f"Iluminacao da sala: {field.room_lighting or 'nao informada'}",
+        f"Distancia configurada: {field.configured_distance_m:g} m",
+        f"Observacoes: {field.notes or 'nenhuma'}",
+    ]
 
 
 def write_validation_report(destination: Path, config: RuntimeConfig | None = None, root: Path | None = None, field_validation: FieldValidation | None = None) -> Path:

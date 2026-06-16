@@ -154,6 +154,12 @@ Teste do controle pelo celular:
 Optotipos/Testes/TESTE_CONTROLE_CELULAR.md
 ```
 
+Teste em equipamento real:
+
+```text
+Optotipos/Testes/TESTE_EQUIPAMENTO_REAL.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.

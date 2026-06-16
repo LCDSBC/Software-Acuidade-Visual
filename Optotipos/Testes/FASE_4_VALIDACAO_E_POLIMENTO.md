@@ -35,6 +35,18 @@ O foco e confirmar:
 
 ## Fluxo recomendado no Windows
 
+Roteiro assistido para equipamento real:
+
+```text
+Optotipos/Testes/TESTE_EQUIPAMENTO_REAL.md
+```
+
+Script:
+
+```bat
+teste_equipamento_real_windows.bat
+```
+
 ### 1. Gerar os executaveis
 
 Em um computador Windows com Python instalado:
