@@ -124,6 +124,12 @@ Guia:
 Optotipos/Testes/CONFIANCA_CLINICA.md
 ```
 
+Validacao matematica dos optotipos:
+
+```text
+Optotipos/Testes/VALIDACAO_CLINICA_OPTOTIPOS.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.

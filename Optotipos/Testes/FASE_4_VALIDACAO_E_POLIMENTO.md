@@ -183,6 +183,16 @@ Documento detalhado:
 Optotipos/Testes/CONFIANCA_CLINICA.md
 ```
 
+## Validacao dos optotipos
+
+Antes da medicao fisica, revisar:
+
+```text
+Optotipos/Testes/VALIDACAO_CLINICA_OPTOTIPOS.md
+```
+
+O relatorio `Logs/ValidacaoClinica_Fase4.md` inclui uma secao automatica de validacao matematica dos optotipos.
+
 ## Criterio para concluir a Fase 4
 
 A fase pode ser considerada concluida quando:

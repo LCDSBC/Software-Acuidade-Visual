@@ -240,7 +240,7 @@ def draw_grid_optotype(canvas: Canvas, x: float, y: float, size: int, stroke: in
 
 
 def e_pattern_cells() -> set[tuple[int, int]]:
-    return {(0, row) for row in range(5)} | {(col, 0) for col in range(5)} | {(col, 2) for col in range(4)} | {(col, 4) for col in range(5)}
+    return {(0, row) for row in range(5)} | {(col, 0) for col in range(5)} | {(col, 2) for col in range(5)} | {(col, 4) for col in range(5)}
 
 
 def block_letter_cells(symbol: str) -> set[tuple[int, int]]:

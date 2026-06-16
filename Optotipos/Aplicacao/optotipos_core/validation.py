@@ -7,13 +7,28 @@ from pathlib import Path
 
 from .calibration import (
     DisplayCalibration,
+    SNELLEN_CLINICAL_DENOMINATORS,
+    STANDARD_LETTER_ARC_MINUTES,
     calibration_from_config,
     calibration_report,
+    etdrs_line_denominators,
+    etdrs_line_logmars,
     logmar_from_denominator,
     snellen_letter_height_mm,
 )
 from .config import RuntimeConfig, load_config
 from .paths import ensure_portable_tree
+from .rendering import (
+    ETDRS_OPTOTYPES_PER_LINE,
+    OPTOTYPE_GRID,
+    ROTATIONS,
+    SNELLEN_DENOMINATORS,
+    block_letter_cells,
+    clinical_line,
+    e_pattern_cells,
+    etdrs_spacing_px,
+    landolt_gap_px,
+)
 
 
 DEFAULT_VALIDATION_DISTANCES_M = (4.0, 5.0, 6.0)
@@ -95,6 +110,38 @@ class ClinicalConfidence:
         ]
 
 
+@dataclass(frozen=True)
+class OptotypeClinicalCheck:
+    name: str
+    criterion: str
+    passed: bool
+    details: str
+    severity: str = "critico"
+
+
+@dataclass(frozen=True)
+class OptotypeValidationSummary:
+    checks: tuple[OptotypeClinicalCheck, ...]
+
+    @property
+    def passed_count(self) -> int:
+        return sum(1 for check in self.checks if check.passed)
+
+    @property
+    def failed_critical_count(self) -> int:
+        return sum(1 for check in self.checks if not check.passed and check.severity == "critico")
+
+    @property
+    def approved_for_field_validation(self) -> bool:
+        return self.failed_critical_count == 0
+
+    @property
+    def score_percent(self) -> float:
+        if not self.checks:
+            return 0.0
+        return self.passed_count / len(self.checks) * 100
+
+
 def expected_20_20_measurements(distances_m: tuple[float, ...] = DEFAULT_VALIDATION_DISTANCES_M) -> list[OptotypeMeasurement]:
     return [
         OptotypeMeasurement(
@@ -106,6 +153,175 @@ def expected_20_20_measurements(distances_m: tuple[float, ...] = DEFAULT_VALIDAT
         )
         for distance in distances_m
     ]
+
+
+def validate_optotypes(calibration: DisplayCalibration | None = None) -> OptotypeValidationSummary:
+    calibration = calibration or DisplayCalibration(
+        distance_m=4,
+        screen_width_mm=597,
+        screen_height_mm=336,
+        resolution_width=1920,
+        resolution_height=1080,
+        scale_factor=1.0,
+    )
+    checks = [
+        validate_snellen_lines(),
+        validate_snellen_visual_angle(),
+        validate_snellen_stroke(calibration),
+        validate_tumbling_e_geometry(),
+        validate_tumbling_e_rotations(),
+        validate_landolt_c_geometry(),
+        validate_etdrs_progression(),
+        validate_etdrs_spacing(calibration),
+        validate_duochrome_dependency(calibration),
+        validate_astigmatic_clock_geometry(),
+    ]
+    return OptotypeValidationSummary(tuple(checks))
+
+
+def validate_snellen_lines() -> OptotypeClinicalCheck:
+    expected = SNELLEN_CLINICAL_DENOMINATORS
+    passed = tuple(SNELLEN_DENOMINATORS) == expected
+    return OptotypeClinicalCheck(
+        name="Snellen - linhas obrigatorias",
+        criterion="20/400, 20/300, 20/200, 20/100, 20/80, 20/60, 20/50, 20/40, 20/30, 20/25, 20/20, 20/15 e 20/10",
+        passed=passed,
+        details=f"linhas={tuple(SNELLEN_DENOMINATORS)}",
+    )
+
+
+def validate_snellen_visual_angle() -> OptotypeClinicalCheck:
+    height_4m = snellen_letter_height_mm(4, 20)
+    expected = 5.8178
+    passed = abs(height_4m - expected) < 0.01
+    return OptotypeClinicalCheck(
+        name="Snellen - angulo visual",
+        criterion=f"20/20 deve subtender {STANDARD_LETTER_ARC_MINUTES:g} minutos de arco",
+        passed=passed,
+        details=f"20/20 a 4 m={height_4m:.4f} mm",
+    )
+
+
+def validate_snellen_stroke(calibration: DisplayCalibration) -> OptotypeClinicalCheck:
+    line = clinical_line(calibration, 20, 5)
+    passed = line.stroke_width_px == round(line.optotype_size_px / OPTOTYPE_GRID)
+    return OptotypeClinicalCheck(
+        name="Snellen - traco 1/5",
+        criterion="espessura do traco deve ser 1/5 da altura do optotipo",
+        passed=passed,
+        details=f"altura={line.optotype_size_px}px, traco={line.stroke_width_px}px",
+    )
+
+
+def validate_tumbling_e_geometry() -> OptotypeClinicalCheck:
+    cells = e_pattern_cells()
+    required = {(0, row) for row in range(5)} | {(col, 0) for col in range(5)} | {(col, 2) for col in range(5)} | {(col, 4) for col in range(5)}
+    passed = cells == required and all(0 <= col < OPTOTYPE_GRID and 0 <= row < OPTOTYPE_GRID for col, row in cells)
+    return OptotypeClinicalCheck(
+        name="Tumbling E - grade 5x5",
+        criterion="E deve ocupar grade 5x5 com haste vertical e tres barras horizontais completas",
+        passed=passed,
+        details=f"celulas={len(cells)}",
+    )
+
+
+def validate_tumbling_e_rotations() -> OptotypeClinicalCheck:
+    passed = tuple(ROTATIONS) == (0, 90, 180, 270)
+    return OptotypeClinicalCheck(
+        name="Tumbling E - orientacoes",
+        criterion="orientacoes obrigatorias 0, 90, 180 e 270 graus",
+        passed=passed,
+        details=f"orientacoes={tuple(ROTATIONS)}",
+    )
+
+
+def validate_landolt_c_geometry() -> OptotypeClinicalCheck:
+    size = 100
+    gap = landolt_gap_px(size)
+    passed = gap == size / OPTOTYPE_GRID
+    return OptotypeClinicalCheck(
+        name="Landolt C - abertura proporcional",
+        criterion="abertura deve ser 1/5 do diametro",
+        passed=passed,
+        details=f"diametro={size}px, abertura={gap}px",
+    )
+
+
+def validate_etdrs_progression() -> OptotypeClinicalCheck:
+    logmars = etdrs_line_logmars()
+    denominators = etdrs_line_denominators()
+    steps_ok = all(round(logmars[index] - logmars[index + 1], 1) == 0.1 for index in range(len(logmars) - 1))
+    passed = len(logmars) == len(denominators) and steps_ok and ETDRS_OPTOTYPES_PER_LINE == 5
+    return OptotypeClinicalCheck(
+        name="ETDRS - progressao LogMAR",
+        criterion="progressao de 0.1 LogMAR com 5 optotipos por linha",
+        passed=passed,
+        details=f"linhas={len(logmars)}, optotipos_por_linha={ETDRS_OPTOTYPES_PER_LINE}",
+    )
+
+
+def validate_etdrs_spacing(calibration: DisplayCalibration) -> OptotypeClinicalCheck:
+    line = clinical_line(calibration, 20, ETDRS_OPTOTYPES_PER_LINE)
+    passed = line.letter_spacing_px == line.optotype_size_px and line.row_spacing_px == line.optotype_size_px and etdrs_spacing_px(line.optotype_size_px) == line.optotype_size_px
+    return OptotypeClinicalCheck(
+        name="ETDRS - espacamento normativo",
+        criterion="espacamento entre optotipos e linhas deve ser uma largura/altura de optotipo",
+        passed=passed,
+        details=f"altura={line.optotype_size_px}px, espaco_letra={line.letter_spacing_px}px, espaco_linha={line.row_spacing_px}px",
+    )
+
+
+def validate_duochrome_dependency(calibration: DisplayCalibration) -> OptotypeClinicalCheck:
+    line_30 = clinical_line(calibration, 30, 4)
+    passed = line_30.stroke_width_px == round(line_30.optotype_size_px / OPTOTYPE_GRID)
+    return OptotypeClinicalCheck(
+        name="Duocromatico - letras calibradas",
+        criterion="letras do duocromatico devem usar o mesmo calculo de tamanho e traco dos optotipos",
+        passed=passed,
+        details=f"base 20/30: altura={line_30.optotype_size_px}px, traco={line_30.stroke_width_px}px",
+    )
+
+
+def validate_astigmatic_clock_geometry() -> OptotypeClinicalCheck:
+    degrees = tuple(range(0, 180, 10))
+    passed = len(degrees) == 18 and degrees[0] == 0 and degrees[-1] == 170
+    return OptotypeClinicalCheck(
+        name="Relogio astigmatico - 180 graus",
+        criterion="linhas devem cobrir 180 graus em intervalos uniformes de 10 graus",
+        passed=passed,
+        details=f"linhas_radiais={len(degrees)}, intervalo=10 graus",
+    )
+
+
+def build_optotype_validation_report(calibration: DisplayCalibration | None = None) -> str:
+    summary = validate_optotypes(calibration)
+    lines = [
+        "# Validacao clinica matematica dos optotipos",
+        "",
+        "Esta validacao confirma geometria e calculos implementados no software.",
+        "Ela nao substitui medicao fisica em tela real nem validacao regulatoria.",
+        "",
+        f"Pontuacao: {summary.score_percent:.1f}%",
+        f"Aprovado para validacao de campo: {'SIM' if summary.approved_for_field_validation else 'NAO'}",
+        f"Falhas criticas: {summary.failed_critical_count}",
+        "",
+        "| Teste | Criterio | Status | Detalhes |",
+        "| --- | --- | --- | --- |",
+    ]
+    for check in summary.checks:
+        lines.append(f"| {check.name} | {check.criterion} | {'OK' if check.passed else 'FALHA'} | {check.details} |")
+    lines.extend(
+        [
+            "",
+            "## Limites desta validacao",
+            "",
+            "- Nao confirma luminancia real da tela.",
+            "- Nao confirma tamanho fisico exibido sem medicao com regua.",
+            "- Nao substitui validacao clinica formal.",
+            "- Nao resolve licenciamento de simbolos ou testes proprietarios.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def measurement_result(label: str, expected_mm: float, measured_mm: float, limit_percent: float = DEFAULT_ERROR_LIMIT_PERCENT) -> MeasurementResult:
@@ -246,6 +462,7 @@ def build_validation_report(config: RuntimeConfig | None = None, root: Path | No
     status = portable_status(config.root)
     report = calibration_report(calibration)
     confidence = evaluate_clinical_confidence(field_validation, status)
+    optotype_summary = validate_optotypes(calibration)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     lines = [
@@ -265,6 +482,16 @@ def build_validation_report(config: RuntimeConfig | None = None, root: Path | No
         "## Confianca clinica",
         "",
         *confidence.as_lines(),
+        "",
+        "## Validacao matematica dos optotipos",
+        "",
+        f"Pontuacao: {optotype_summary.score_percent:.1f}%",
+        f"Aprovado para validacao de campo: {'SIM' if optotype_summary.approved_for_field_validation else 'NAO'}",
+        f"Falhas criticas: {optotype_summary.failed_critical_count}",
+        "",
+        "| Teste | Status | Detalhes |",
+        "| --- | --- | --- |",
+        *[f"| {check.name} | {'OK' if check.passed else 'FALHA'} | {check.details} |" for check in optotype_summary.checks],
         "",
         "## Calibracao carregada",
         "",

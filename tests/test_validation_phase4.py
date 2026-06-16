@@ -55,6 +55,7 @@ class Phase4ValidationTest(unittest.TestCase):
             report = build_validation_report(root=root)
             self.assertIn("Relatorio de Validacao Clinica - Fase 4", report)
             self.assertIn("Optotipo 20/20 a 4 m", report)
+            self.assertIn("Validacao matematica dos optotipos", report)
             self.assertIn("TelaUnica", report)
             self.assertIn("controle por celular", report)
 
