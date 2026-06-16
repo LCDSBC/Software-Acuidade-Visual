@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from typing import Any
 
 try:
-    from tkinter import Canvas
+    from tkinter import Canvas, PhotoImage
 except ModuleNotFoundError:  # pragma: no cover - used only in headless test environments.
     Canvas = Any
+    PhotoImage = None
 
 from .calibration import (
     DisplayCalibration,
@@ -20,6 +21,7 @@ from .calibration import (
     snellen_letter_height_px,
 )
 from .catalog import VisualTest
+from .clinical_assets import load_asset_manifest, validate_asset_pack
 
 
 SNELLEN_DENOMINATORS = SNELLEN_CLINICAL_DENOMINATORS
@@ -97,9 +99,12 @@ def render_test(
     elif renderer == "worth":
         draw_worth(canvas, width, height)
     elif renderer in {"vectogram", "fusion", "vergence", "fixation", "suppression"}:
-        draw_binocular_pattern(canvas, width, height, test.name, options)
+        if renderer == "vectogram":
+            draw_asset_backed_test(canvas, width, height, test.key, test.name, options)
+        else:
+            draw_binocular_pattern(canvas, width, height, test.name, options)
     elif renderer in {"stereo_circles", "randot", "fly", "stereo_shapes"}:
-        draw_stereo(canvas, width, height, test.name, options)
+        draw_asset_backed_test(canvas, width, height, test.key, test.name, options)
     elif renderer in {"motility_h", "motility_points", "saccades", "pursuits"}:
         draw_motility(canvas, width, height, test.name, renderer, options)
     elif renderer == "contrast_letters":
@@ -109,11 +114,14 @@ def render_test(
     elif renderer == "sine_contrast":
         draw_sine_contrast(canvas, width, height)
     elif renderer in {"ishihara", "hrr"}:
-        draw_color_plate(canvas, width, height, renderer)
+        draw_asset_backed_test(canvas, width, height, test.key, test.name, options)
     elif renderer in {"hue_tiles", "hue_tiles_large"}:
         draw_hue_tiles(canvas, width, height, large=renderer == "hue_tiles_large")
     elif renderer.startswith("filter_"):
-        draw_filter(canvas, width, height, renderer)
+        if renderer in {"filter_polarized", "filter_anaglyph"}:
+            draw_asset_backed_test(canvas, width, height, test.key, test.name, options)
+        else:
+            draw_filter(canvas, width, height, renderer)
     else:
         canvas.create_text(width / 2, height / 2, text=test.name, fill=options.foreground, font=("Arial", 64, "bold"))
 
@@ -467,11 +475,31 @@ def draw_motility(canvas: Canvas, width: int, height: int, title: str, renderer:
 
 
 def draw_contrast_letters(canvas: Canvas, width: int, height: int) -> None:
-    letters = ("P", "E", "L", "L", "I", "R", "O", "B", "S", "O", "N")
-    for index, letter in enumerate(letters):
-        shade = 20 + index * 18
-        color = f"#{shade:02x}{shade:02x}{shade:02x}"
-        canvas.create_text(width * (0.12 + index * 0.075), height / 2, text=letter, fill=color, font=("Arial", 68, "bold"))
+    triplets = pelli_robson_triplets()
+    start_y = height * 0.2
+    row_gap = height * 0.105
+    col_x = (width * 0.25, width * 0.5, width * 0.75)
+    canvas.create_text(width / 2, height * 0.08, text="Pelli-Robson - contraste por trios", fill="black", font=("Arial", 26, "bold"))
+    for row in range(8):
+        y = start_y + row * row_gap
+        for col in range(3):
+            index = row * 3 + col
+            letters, log_contrast = triplets[index]
+            gray = pelli_gray_from_log_contrast(log_contrast)
+            color = f"#{gray:02x}{gray:02x}{gray:02x}"
+            canvas.create_text(col_x[col], y, text=letters, fill=color, font=("Arial", max(34, int(height * 0.065)), "bold"))
+            canvas.create_text(col_x[col], y + row_gap * 0.34, text=f"{log_contrast:.2f}", fill="#555555", font=("Arial", 10))
+
+
+def pelli_robson_triplets() -> tuple[tuple[str, float], ...]:
+    # Letter triplets are deterministic non-diagnostic content; clinical use still requires luminance validation.
+    letters = ("P E Z", "U H S", "N C K", "O V R", "H Z D", "S C N", "K R O", "V D H", "C S Z", "N O V", "R K D", "Z H C", "O S N", "D V R", "K C H", "S Z O", "N R D", "V H K", "C O S", "R Z N", "D K V", "H C R", "O N Z", "S V K")
+    return tuple((triplet, 1.95 - index * 0.075) for index, triplet in enumerate(letters))
+
+
+def pelli_gray_from_log_contrast(log_contrast: float) -> int:
+    normalized = max(0.08, min(1.0, log_contrast / 1.95))
+    return round(255 * (1 - normalized))
 
 
 def draw_contrast_levels(canvas: Canvas, width: int, height: int) -> None:
@@ -505,13 +533,25 @@ def draw_color_plate(canvas: Canvas, width: int, height: int, renderer: str) -> 
 
 
 def draw_hue_tiles(canvas: Canvas, width: int, height: int, large: bool = False) -> None:
-    count = 32 if large else 15
-    tile_w = width * 0.75 / count
+    count = 85 if large else 15
+    columns = 17 if large else 15
+    rows = math.ceil(count / columns)
+    tile_w = width * 0.78 / columns
+    tile_h = min(height * 0.12, height * 0.5 / rows)
+    start_x = width * 0.11
+    start_y = height * 0.34 if not large else height * 0.24
+    title = "Farnsworth 100 Hue - ordenacao de matizes" if large else "Farnsworth D15 - ordenacao de matizes"
+    canvas.create_text(width / 2, height * 0.1, text=title, fill="black", font=("Arial", 28, "bold"))
+    canvas.create_text(width / 2, height * 0.17, text="Protocolo visual: validar iluminacao e reproducao cromatica do monitor antes do uso clinico.", fill="#555555", font=("Arial", 14))
     for index in range(count):
         hue = index / count
         r, g, b = hsv_to_rgb(hue, 0.65, 0.9)
-        x1 = width * 0.125 + index * tile_w
-        canvas.create_rectangle(x1, height * 0.42, x1 + tile_w - 2, height * 0.58, fill=f"#{r:02x}{g:02x}{b:02x}", outline="black")
+        row = index // columns
+        col = index % columns
+        x1 = start_x + col * tile_w
+        y1 = start_y + row * tile_h * 1.5
+        canvas.create_rectangle(x1, y1, x1 + tile_w - 2, y1 + tile_h, fill=f"#{r:02x}{g:02x}{b:02x}", outline="black")
+        canvas.create_text(x1 + tile_w / 2, y1 + tile_h + 12, text=str(index + 1), fill="#333333", font=("Arial", 9))
 
 
 def hsv_to_rgb(h: float, s: float, v: float) -> tuple[int, int, int]:
@@ -535,6 +575,51 @@ def draw_filter(canvas: Canvas, width: int, height: int, renderer: str) -> None:
     color = colors.get(renderer, "#ffffff")
     canvas.create_rectangle(0, 0, width, height, fill=color, outline="")
     canvas.create_text(width / 2, height / 2, text=renderer.replace("filter_", "Filtro ").title(), fill="white" if renderer != "filter_polarized" else "black", font=("Arial", 64, "bold"))
+
+
+def draw_asset_backed_test(canvas: Canvas, width: int, height: int, test_key: str, title: str, options: RenderOptions) -> None:
+    status = validate_asset_pack(test_key)
+    if not status.ready:
+        draw_asset_required_notice(canvas, width, height, title, status.summary, status.spec.instructions, options)
+        return
+    if draw_first_asset_image(canvas, width, height, test_key):
+        return
+    canvas.create_text(width / 2, height * 0.34, text=title, fill=options.foreground, font=("Arial", 38, "bold"))
+    canvas.create_text(width / 2, height * 0.48, text="Pacote licenciado validado.", fill=options.foreground, font=("Arial", 24, "bold"))
+    canvas.create_text(width / 2, height * 0.56, text=f"{status.file_count} arquivo(s) declarados no manifesto.", fill=options.foreground, font=("Arial", 18))
+    canvas.create_text(width / 2, height * 0.64, text="Se as imagens nao aparecerem, use PNG/GIF suportado pelo Tk ou valide o empacotamento.", fill="#666666", font=("Arial", 14))
+
+
+def draw_asset_required_notice(canvas: Canvas, width: int, height: int, title: str, summary: str, instructions: str, options: RenderOptions) -> None:
+    canvas.create_rectangle(width * 0.12, height * 0.18, width * 0.88, height * 0.82, fill="#fff6d7", outline="#b58b00", width=3)
+    canvas.create_text(width / 2, height * 0.28, text=title, fill="#4a3a00", font=("Arial", 34, "bold"))
+    canvas.create_text(width / 2, height * 0.42, text="USO CLINICO BLOQUEADO", fill="#9a1b1b", font=("Arial", 28, "bold"))
+    canvas.create_text(width / 2, height * 0.52, text=summary, fill="#333333", font=("Arial", 17), width=width * 0.65)
+    canvas.create_text(width / 2, height * 0.64, text=instructions, fill="#333333", font=("Arial", 15), width=width * 0.65)
+    canvas.create_text(width / 2, height * 0.73, text="Nao substituir por imagens geradas ou copias nao licenciadas.", fill="#333333", font=("Arial", 14, "bold"))
+
+
+def draw_first_asset_image(canvas: Canvas, width: int, height: int, test_key: str) -> bool:
+    if PhotoImage is None or not hasattr(canvas, "create_image"):
+        return False
+    try:
+        manifest = load_asset_manifest(test_key)
+        files = manifest.get("files", [])
+        if not files:
+            return False
+        first = files[0]
+        file_name = first.get("path") if isinstance(first, dict) else first
+        if not isinstance(file_name, str):
+            return False
+        image_path = validate_asset_pack(test_key).root / file_name
+        image = PhotoImage(file=str(image_path))
+        canvas.create_image(width / 2, height / 2, image=image)
+        if not hasattr(canvas, "_optotipos_images"):
+            canvas._optotipos_images = []  # type: ignore[attr-defined]
+        canvas._optotipos_images.append(image)  # type: ignore[attr-defined]
+        return True
+    except Exception:
+        return False
 
 
 def draw_overlay(

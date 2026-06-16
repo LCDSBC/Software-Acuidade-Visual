@@ -130,6 +130,12 @@ Validacao matematica dos optotipos:
 Optotipos/Testes/VALIDACAO_CLINICA_OPTOTIPOS.md
 ```
 
+Testes que exigem ativos licenciados:
+
+```text
+Optotipos/Testes/TESTES_PROFISSIONAIS_LICENCIADOS.md
+```
+
 ## Controles principais
 
 - Seta direita/esquerda: proximo/anterior.

@@ -25,6 +25,18 @@ Ela nao substitui:
 
 ## Optotipos validados
 
+## Testes dependentes de ativos licenciados
+
+Ishihara, HRR, Wirt, Randot, Fly Test, vetogramas e optotipos polarizados/anaglifos nao sao validados como pranchas reais sem o pacote licenciado correspondente.
+
+Guia:
+
+```text
+Optotipos/Testes/TESTES_PROFISSIONAIS_LICENCIADOS.md
+```
+
+Sem ativos licenciados, o software exibe bloqueio de uso clinico em vez de uma simulacao enganosa.
+
 ### Snellen Letras
 
 Validacoes:

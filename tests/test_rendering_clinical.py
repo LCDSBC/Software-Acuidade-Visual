@@ -21,11 +21,15 @@ from optotipos_core.rendering import (
     clinical_line,
     contrast_color,
     draw_astigmatic_clock,
+    draw_asset_backed_test,
     draw_landolt_c,
+    draw_hue_tiles,
     draw_symbol,
     e_pattern_cells,
     etdrs_spacing_px,
     landolt_gap_px,
+    pelli_gray_from_log_contrast,
+    pelli_robson_triplets,
     render_test,
     rotate_point,
     rotated_cell_points,
@@ -129,6 +133,26 @@ class ClinicalRenderingTest(unittest.TestCase):
         polygons = [call for call in canvas.calls if call[0] == "polygon"]
         self.assertGreaterEqual(len(rectangles), 2)
         self.assertGreater(len(polygons), 0)
+
+    def test_pelli_robson_has_descending_triplet_contrast(self) -> None:
+        triplets = pelli_robson_triplets()
+        self.assertEqual(len(triplets), 24)
+        self.assertGreater(triplets[0][1], triplets[-1][1])
+        self.assertLess(pelli_gray_from_log_contrast(triplets[0][1]), pelli_gray_from_log_contrast(triplets[-1][1]))
+
+    def test_farnsworth_d15_and_100_hue_draw_ordered_tiles(self) -> None:
+        d15 = FakeCanvas()
+        draw_hue_tiles(d15, 1200, 800, large=False)
+        self.assertEqual(len([call for call in d15.calls if call[0] == "rectangle"]), 15)
+        hue100 = FakeCanvas()
+        draw_hue_tiles(hue100, 1600, 900, large=True)
+        self.assertEqual(len([call for call in hue100.calls if call[0] == "rectangle"]), 85)
+
+    def test_licensed_asset_missing_draws_clinical_block_notice(self) -> None:
+        canvas = FakeCanvas()
+        draw_asset_backed_test(canvas, 1280, 720, "ishihara", "Ishihara", RenderOptions())
+        texts = [call for call in canvas.calls if call[0] == "text"]
+        self.assertTrue(any("USO CLINICO BLOQUEADO" in str(call[2].get("text", "")) for call in texts))
 
     def test_render_all_registered_tests_without_gui(self) -> None:
         for test in TESTS:

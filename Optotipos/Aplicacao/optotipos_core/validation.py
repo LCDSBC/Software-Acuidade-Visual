@@ -17,6 +17,7 @@ from .calibration import (
     snellen_letter_height_mm,
 )
 from .config import RuntimeConfig, load_config
+from .clinical_assets import validate_all_asset_packs
 from .paths import ensure_portable_tree
 from .rendering import (
     ETDRS_OPTOTYPES_PER_LINE,
@@ -463,6 +464,7 @@ def build_validation_report(config: RuntimeConfig | None = None, root: Path | No
     report = calibration_report(calibration)
     confidence = evaluate_clinical_confidence(field_validation, status)
     optotype_summary = validate_optotypes(calibration)
+    asset_statuses = validate_all_asset_packs(config.root)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     lines = [
@@ -492,6 +494,15 @@ def build_validation_report(config: RuntimeConfig | None = None, root: Path | No
         "| Teste | Status | Detalhes |",
         "| --- | --- | --- |",
         *[f"| {check.name} | {'OK' if check.passed else 'FALHA'} | {check.details} |" for check in optotype_summary.checks],
+        "",
+        "## Testes profissionais dependentes de ativos licenciados",
+        "",
+        "| Teste | Status | Arquivos | Motivo |",
+        "| --- | --- | ---: | --- |",
+        *[
+            f"| {status.spec.name} | {'PRONTO' if status.ready else 'BLOQUEADO'} | {status.file_count}/{status.spec.minimum_files} | {status.summary} |"
+            for status in asset_statuses
+        ],
         "",
         "## Calibracao carregada",
         "",
