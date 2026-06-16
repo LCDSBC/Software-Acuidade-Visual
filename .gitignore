@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+build/
+dist/
+*.spec.bak
+*.log
+*.tmp
+Optotipos/Logs/*.txt
+Optotipos/Backup/*.opt

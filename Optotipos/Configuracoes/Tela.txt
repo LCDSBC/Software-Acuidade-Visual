@@ -1,0 +1,5 @@
+Polegadas=27
+LarguraTelaMM=597
+AlturaTelaMM=336
+ResolucaoLargura=1920
+ResolucaoAltura=1080

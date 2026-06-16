@@ -1,0 +1,26 @@
+{
+  "operator_name": "Nome do profissional que executou o teste",
+  "test_date": "AAAA-MM-DD",
+  "computer_model": "Exemplo: Mini PC Intel N100",
+  "os_version": "Exemplo: Windows 11 Pro 23H2",
+  "gpu_or_adapter": "Exemplo: Intel UHD / HDMI",
+  "monitor_model": "Exemplo: TV Samsung 43 4K",
+  "resolution": "3840x2160",
+  "connection_type": "Exemplo: HDMI direto / DisplayPort / projetor",
+  "room_lighting": "Exemplo: sala escura / iluminacao controlada",
+  "configured_distance_m": 4.0,
+  "ruler_100mm_measured_mm": null,
+  "optotype_20_20_4m_measured_mm": null,
+  "optotype_20_20_5m_measured_mm": null,
+  "optotype_20_20_6m_measured_mm": null,
+  "checks": {
+    "executaveis_abrem_sem_python": false,
+    "pacote_portatil_copiado": false,
+    "tela_unica_funciona": false,
+    "duas_telas_funciona": false,
+    "espelhamento_funciona": false,
+    "controle_celular_funciona": false,
+    "configuracoes_persistem": false
+  },
+  "notes": "Preencher com observacoes do teste em Windows/consultorio."
+}

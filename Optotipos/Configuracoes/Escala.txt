@@ -1,0 +1,4 @@
+FatorEscala=1.0000
+Polegadas=27
+LarguraTelaMM=597
+AlturaTelaMM=336

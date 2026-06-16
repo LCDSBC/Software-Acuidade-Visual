@@ -1,0 +1,23 @@
+{
+  "test_key": "ishihara",
+  "name": "Ishihara licensed plate set",
+  "version": "licensed-pack-version",
+  "source": "licensed supplier or clinic archive",
+  "license": {
+    "licensed": true,
+    "licensee": "clinic or professional name",
+    "document": "invoice/license/reference"
+  },
+  "display": {
+    "preferred_format": "png",
+    "validated_monitor_required": true,
+    "notes": "Validate color reproduction, luminance and viewing distance before clinical use."
+  },
+  "files": [
+    {
+      "path": "plate_01.png",
+      "label": "Plate 1",
+      "expected_response": "licensed-content-response"
+    }
+  ]
+}
